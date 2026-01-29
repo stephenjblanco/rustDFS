@@ -17,5 +17,5 @@ tonic-reflection = "0.14"
 tonic-prost-build = "0.14"
 
 [[bin]]
-name = "rustDFS-server"
-path = "src/config.rs"
+name = "rustDFS-datanode"
+path = "src/data_node.rs"

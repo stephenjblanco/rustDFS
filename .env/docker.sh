@@ -2,13 +2,15 @@
 set -x
 
 image_build() {
-    docker build -t rustdfs-env:latest .
+    docker build \
+        -f .env/Dockerfile \
+        -t rustdfs-env:latest .
 }
 
 image_run() {
-    docker run --rm -it \
-        -v "$(pwd)/..":/rustDFS \
-        -w /rustDFS \
+    docker run -P --rm -it \
+        -v "$(pwd)":/root/rustDFS \
+        -w /root/rustDFS \
         rustdfs-env:latest \
         bash
 }

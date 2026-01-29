@@ -30,4 +30,4 @@ RUN go install github.com/fullstorydev/grpcurl/cmd/grpcurl@v1.9.3
 
 # setup rustDFS config
 RUN mkdir -p /etc/rustdfs
-COPY rdfsconf.toml /etc/rustdfs/rdfsconf.toml
+COPY .env/rdfsconf.toml /etc/rustdfs/rdfsconf.toml

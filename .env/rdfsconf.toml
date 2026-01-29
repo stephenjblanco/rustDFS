@@ -1,9 +1,15 @@
-[server-config]
+[self]
 
-port = 1024
-peer-nodes = [
-    "[::1]:500",
-    "[::1]:501",
-    "[::1]:502",
-    "[::1]:503"
-]
+host = "localhost"
+port = 502
+
+[name-node.0]
+
+host = "[::1]"
+port = 500
+
+[data-node.0]
+
+host = "localhost"
+port = 502
+data-dir ="/var/rustDFS/data"

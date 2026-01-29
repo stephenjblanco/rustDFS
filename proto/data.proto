@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package data_node;
+
+service DataNode {
+    rpc WriteData (WriteRequest) returns (WriteResponse);
+    rpc ReadData (ReadRequest) returns (ReadResponse);
+    rpc Ping (PingMessage) returns (PingMessage);
+}
+
+message WriteRequest {
+    string blockID = 1;
+    bytes data = 2;
+    repeated NodeIdentifier replicaNodes = 3;
+}
+
+message WriteResponse {
+    bool success = 1;
+}
+
+message ReadRequest {
+    string blockID = 1;
+}
+
+message ReadResponse {
+    bytes data = 1;
+}
+
+message PingMessage {
+    int32 nodeID = 1;
+    int64 timestamp = 2;
+}
+
+message NodeIdentifier {
+    string host = 1;
+    int32 port = 2;
+}
