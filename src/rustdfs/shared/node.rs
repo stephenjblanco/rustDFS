@@ -1,7 +1,8 @@
 use super::error::{RustDFSError, Kind};
 
 use std::net::{SocketAddr, ToSocketAddrs};
-use std::sync::RwLock;
+use tokio::sync::RwLock;
+use tonic::transport::Endpoint;
 
 #[derive(Debug)]
 pub struct Node<T> {
@@ -25,5 +26,12 @@ impl <T> Node<T> {
             .map_err(|e| RustDFSError::err_invalid_addr(e))?
             .next()
             .ok_or_else(|| err())
+    }
+
+    pub fn to_endpoint(&self) -> Result<Endpoint, RustDFSError> {
+        let socket_addr = self.to_socket_addr()?;
+        let endpoint = format!("http://{}", socket_addr);
+        Ok(Endpoint::from_shared(endpoint)
+            .map_err(|e| RustDFSError::err_invalid_addr_tonic(e))?)
     }
 }

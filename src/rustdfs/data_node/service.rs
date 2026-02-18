@@ -3,7 +3,8 @@ use std::convert::identity;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::fs::{self, File};
-use std::sync::RwLock;
+use tokio::sync::RwLock;
+use futures::future::join_all;
 
 use tonic::{Request, Response, Status, client};
 use tonic::transport::{Server, Channel};
@@ -38,7 +39,7 @@ impl DataNode for DataNodeService {
     ) -> Result<Response<WriteResponse>, Status> {
         let request_ref = request.get_ref();
         let path = format!("{}/{}", self.data_dir.safe_path_str, request_ref.block_id);
-        let repls: Vec< = Vec::new()
+        let mut repls = Vec::new();
 
 
         let write_res = File::create(path)?
@@ -54,16 +55,24 @@ impl DataNode for DataNodeService {
                 continue;
             }
 
-            let node = self.data_nodes.get(id)
-                .ok_or_else(|| RustDFSError::err_misconfigured_svc())?;
+            let node_err = format!("Bad replica node ID: {}", id).to_string();
+            let repl_node = self.data_nodes.get(id)
+                .ok_or_else(|| Status::invalid_argument(node_err))?;
 
-            self.fwd_write(node, request.clone())
-                .await?;
+            repls.push(
+                self.fwd_write(
+                    repl_node,
+                    WriteRequest {
+                        block_id: request_ref.block_id.clone(),
+                        data: request_ref.data.clone(),
+                        replica_node_ids: vec![],
+                    }
+                )
+            );
         }
 
-        let reply = WriteResponse { success: true };
-
-        Ok(Response::new(reply))
+        join_all(repls).await;
+        Ok(Response::new(WriteResponse { success: true }))
     }
 
     async fn read_data(
@@ -164,13 +173,13 @@ impl DataNodeService {
     async fn fwd_write(
         &self, 
         node: &DataNodeConn, 
-        request: Request<WriteRequest>,
+        request: WriteRequest,
     ) -> Result<(), RustDFSError> {
         self.init_client(node).await?;
 
         node.client_ref
             .write()
-            .map_err(|e| { RustDFSError::err_client_lock(e) })?
+            .await
             .as_mut()
             .ok_or_else(|| RustDFSError::err_misconfigured_svc())?
             .write_data(request)
@@ -186,20 +195,22 @@ impl DataNodeService {
     ) -> Result<(), RustDFSError> {
         let client_opt = node.client_ref
             .read()
-            .map_err(|e| RustDFSError::err_client_lock(e))?;
+            .await;
 
         if client_opt.is_some() {
             return Ok(());
         }
 
-        let c = DataNodeClient::connect(format!("http://{}", node.to_socket_addr()?))
-            .await
-            .map_err(|e| RustDFSError::err_serving(e))?;
         let mut write_ref = node.client_ref
             .write()
-            .map_err(|e| RustDFSError::err_client_lock(e))?;
+            .await;
 
-        *write_ref = Some(c);
+        *write_ref = Some(
+            DataNodeClient::connect(node.to_endpoint()?)
+                .await
+                .map_err(|e| RustDFSError::err_serving(e))?
+        );
+
         Ok(())
     }
 }

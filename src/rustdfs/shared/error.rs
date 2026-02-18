@@ -75,6 +75,13 @@ impl RustDFSError {
         }
     }
 
+    pub fn err_invalid_addr_tonic(e: TonicError) -> Self {
+        RustDFSError {
+            kind: Kind::ConfigError,
+            message: format!("{}", e),
+        }
+    }
+
     pub fn err_client_lock<T>(e: PoisonError<T>) -> Self {
         RustDFSError {
             kind: Kind::AsyncLockError,
