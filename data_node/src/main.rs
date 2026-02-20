@@ -1,13 +1,13 @@
-mod rustdfs;
+mod data_node;
 
-use crate::rustdfs::shared::args::RustDFSArgs;
-use crate::rustdfs::shared::result::Result;
+use data_node::service::DataNodeService;
+
+use rustdfs_shared::args::RustDFSArgs;
+use rustdfs_shared::result::Result;
+use rustdfs_shared::config::RustDFSConfig;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    use crate::rustdfs::data_node::service::DataNodeService;
-    use crate::rustdfs::shared::config::RustDFSConfig;
-
     let config = RustDFSConfig::new()?;
     let args = RustDFSArgs::new();
 

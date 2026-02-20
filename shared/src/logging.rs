@@ -3,8 +3,8 @@ use chrono::Local;
 use std::fs::{self, write};
 use std::path::Path;
 
-use crate::rustdfs::shared::error::RustDFSError;
-use crate::rustdfs::shared::result::Result;
+use super::error::RustDFSError;
+use super::result::Result;
 
 #[derive(Debug, Clone)]
 pub struct LogManager {

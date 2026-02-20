@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::Path;
 
-use crate::rustdfs::shared::error::RustDFSError;
-use crate::rustdfs::shared::result::Result;
+use rustdfs_shared::error::RustDFSError;
+use rustdfs_shared::result::Result;
 
 #[derive(Debug)]
 pub struct DataDirManager {
