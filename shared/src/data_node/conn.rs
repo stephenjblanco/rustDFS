@@ -1,9 +1,8 @@
-use std::net::{SocketAddr, ToSocketAddrs};
+use std::net::SocketAddr;
 use tokio::sync::RwLock;
 use tonic::Status;
 use tonic::transport::{Channel, Endpoint};
 
-use crate::base::error::{RustDFSError, Kind};
 use crate::base::node::{GenericNode, Node};
 use crate::base::result::{Result, ServiceResult};
 

@@ -1,8 +1,8 @@
 use std::collections::HashMap;
-use futures::future::{join, join_all};
+use futures::future::join_all;
 
 use tonic::{Request, Response, Status};
-use tonic::transport::{Server, Channel};
+use tonic::transport::Server;
 use tonic_reflection::server::Builder;
 
 use super::data_mgr::DataDirManager;

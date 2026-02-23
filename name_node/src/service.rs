@@ -1,10 +1,8 @@
 use std::collections::HashMap;
 use std::pin::Pin;
-use uuid::Uuid;
 use rand::seq::SliceRandom;
 
 use tokio_stream::{Stream, StreamExt};
-use tokio::sync::{mpsc, RwLock};
 use tonic::{Request, Response, Streaming};
 
 use super::proto::name_node_server::NameNode;
@@ -18,8 +16,6 @@ use rustdfs_shared::base::args::RustDFSArgs;
 use rustdfs_shared::base::node::{GenericNode, Node};
 
 use rustdfs_shared::data_node::conn::DataNodeConn;
-use rustdfs_shared::data_node::proto::data_node_client::DataNodeClient;
-use rustdfs_shared::data_node::proto::DataWriteRequest;
 
 type ReadStream = Pin<Box<dyn Stream<Item = ServiceResult<NameReadResponse>> + Send>>;
 
@@ -39,8 +35,8 @@ impl NameNode for NameNodeService {
         &self,
         request: Request<Streaming<NameWriteRequest>>,
     ) -> ServiceResult<Response<NameWriteResponse>> {
-        let mut name: Option<String> = None;
-        let mut stream = request.into_inner();
+        let name: Option<String> = None;
+        let stream = request.into_inner();
         /* 
         let (tx, rx) = mpsc::channel(128);
 
