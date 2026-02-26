@@ -1,21 +1,23 @@
 use std::collections::HashMap;
 use std::pin::Pin;
-use std::iter as std_iter;
-use std::sync::{Mutex, Arc};
+use std::sync::Arc;
 use rand::seq::SliceRandom;
 use futures::future::join_all;
-use futures::stream::FuturesOrdered;
 use uuid::Uuid;
 
-use tokio_stream::{iter as tokio_iter, Stream, StreamExt};
-use tonic::{Request, Response, Status, Streaming};
 use tokio::sync::mpsc;
+use tokio_stream::{Stream, StreamExt};
+use tokio_stream::wrappers::ReceiverStream;
+use tonic::{Request, Response, Status, Streaming};
+use tonic::transport::Server;
+use tonic_reflection::server::Builder;
 
 use crate::name_mgr::BlockDescriptor;
-
 use super::name_mgr::NameManager;
 use super::proto::name_node_server::NameNode;
 use super::proto::{NameWriteRequest, NameWriteResponse, NameReadRequest, NameReadResponse};
+use super::proto::name_node_server::NameNodeServer;
+use super::proto::NAME_NODE_FILE_DESCRIPTOR_SET;
 
 use rustdfs_shared::base::error::RustDFSError;
 use rustdfs_shared::base::logging::{LogManager, LogLevel};
@@ -33,6 +35,7 @@ type ReadStream = Pin<Box<dyn Stream<Item = ServiceResult<NameReadResponse>> + S
 #[derive(Debug)]
 pub struct NameNodeService {
     id: String,
+    self_node: GenericNode,
     replica_ct: u32,
     name_mgr: NameManager,
     data_nodes: Arc<DataNodeManager>,
@@ -138,7 +141,8 @@ impl NameNode for NameNodeService {
         request: Request<NameReadRequest>,
     ) -> ServiceResult<Response<ReadStream>> {
         let req = request.into_inner();
-        let (tx, _) = mpsc::channel(128);
+        let (tx, rx) = mpsc::channel(128);
+        let out = ReceiverStream::new(rx);
         let mut tasks = Vec::new();
 
         let blocks = self.name_mgr
@@ -216,7 +220,11 @@ impl NameNode for NameNodeService {
             }
         });
 
-        todo!()
+        Ok(
+            Response::new(
+                Box::pin(out) as Self::ReadStream
+            )
+        )
     }
 }
 
@@ -262,6 +270,7 @@ impl NameNodeService {
         Ok(
             NameNodeService {
                 id: id.unwrap(),
+                self_node: self_node,
                 replica_ct: config.replica_count,
                 name_mgr: NameManager::new(), // TODO: handle init
                 data_nodes: Arc::new(
@@ -278,6 +287,38 @@ impl NameNodeService {
                 ),
             }
         )
+    }
+
+    pub async fn serve(
+        self,
+    ) -> Result<()> {
+        let addr: std::net::SocketAddr = self.self_node.to_socket_addr()?;
+
+        // should remove this or make it optional via config
+        // only added this for testing
+        let svc_reflection = Builder::configure()
+            .register_encoded_file_descriptor_set(NAME_NODE_FILE_DESCRIPTOR_SET)
+            .build_v1()
+            .unwrap();
+
+        self.log_mgr.write(
+            LogLevel::Info, 
+            || format!(
+                "Starting NameNodeServer with ID {} at {} on port {}", 
+                self.id, 
+                addr.ip().to_string(), 
+                addr.port()
+            )
+        );
+
+        Server::builder()
+            .add_service(svc_reflection)
+            .add_service(NameNodeServer::new(self))
+            .serve(addr)
+            .await
+            .map_err(|e| { RustDFSError::err_serving_data(e) })?;
+
+        Ok(())
     }
 
     // randomly selects a primary data node and replica nodes

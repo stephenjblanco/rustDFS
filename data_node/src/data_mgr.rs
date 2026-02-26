@@ -28,9 +28,11 @@ impl DataDirManager {
                 .map_err(|e| RustDFSError::err_create_data_dir(path_str, e))?;
         }
 
-        Ok(DataDirManager {
-            path: path_str.to_string(),
-        })
+        Ok(
+            DataDirManager {
+                path: path_str.to_string(),
+            }
+        )
     }
 
     pub fn write_block(
