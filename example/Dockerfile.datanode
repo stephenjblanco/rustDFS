@@ -1,0 +1,28 @@
+# ── build stage ──────────────────────────────────────────────────────────────
+FROM rust:latest AS builder
+
+RUN apt-get update && apt-get install -y protobuf-compiler && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+COPY . .
+RUN cargo build --release --bin rustDFS-datanode
+
+# ── runtime stage ─────────────────────────────────────────────────────────────
+FROM debian:bookworm-slim
+
+RUN apt-get update \
+    && apt-get install -y ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /etc/rustdfs /var/log/rustdfs /var/lib/rustdfs/data
+
+COPY --from=builder /build/target/release/rustDFS-datanode /usr/local/bin/rustDFS-datanode
+COPY test/rdfsconf.toml /etc/rustdfs/rdfsconf.toml
+
+# overridden per-service in docker-compose with DATANODE_HOST / DATANODE_PORT
+ARG DATANODE_HOST=datanode0
+ARG DATANODE_PORT=5001
+
+EXPOSE 5001
+
+ENTRYPOINT ["sh", "-c", "rustDFS-datanode --host $DATANODE_HOST --port $DATANODE_PORT"]

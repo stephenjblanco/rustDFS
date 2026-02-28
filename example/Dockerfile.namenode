@@ -1,0 +1,25 @@
+# ── build stage ──────────────────────────────────────────────────────────────
+FROM rust:latest AS builder
+
+# protoc is required by tonic-prost-build
+RUN apt-get update && apt-get install -y protobuf-compiler && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+COPY . .
+RUN cargo build --release --bin rustDFS-namenode
+
+# ── runtime stage ─────────────────────────────────────────────────────────────
+FROM debian:bookworm-slim
+
+RUN apt-get update \
+    && apt-get install -y ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /etc/rustdfs /var/log/rustdfs /var/lib/rustdfs
+
+COPY --from=builder /build/target/release/rustDFS-namenode /usr/local/bin/rustDFS-namenode
+COPY test/rdfsconf.toml /etc/rustdfs/rdfsconf.toml
+
+EXPOSE 5000
+
+ENTRYPOINT ["rustDFS-namenode", "--host", "namenode", "--port", "5000"]
