@@ -1,4 +1,4 @@
-name: rustdfs-test
+name: rustdfs-example
 
 networks:
   rustdfs:
@@ -11,7 +11,7 @@ services:
   datanode0:
     build:
       context: ..
-      dockerfile: test/Dockerfile.datanode
+      dockerfile: example/Dockerfile.datanode
       args:
         DATANODE_HOST: datanode0
         DATANODE_PORT: "5001"
@@ -27,7 +27,7 @@ services:
   datanode1:
     build:
       context: ..
-      dockerfile: test/Dockerfile.datanode
+      dockerfile: example/Dockerfile.datanode
       args:
         DATANODE_HOST: datanode1
         DATANODE_PORT: "5002"
@@ -43,7 +43,7 @@ services:
   datanode2:
     build:
       context: ..
-      dockerfile: test/Dockerfile.datanode
+      dockerfile: example/Dockerfile.datanode
       args:
         DATANODE_HOST: datanode2
         DATANODE_PORT: "5003"
@@ -61,7 +61,7 @@ services:
   namenode:
     build:
       context: ..
-      dockerfile: test/Dockerfile.namenode
+      dockerfile: example/Dockerfile.namenode
     hostname: namenode
     ports:
       - "5000:5000"
@@ -71,3 +71,16 @@ services:
       - datanode0
       - datanode1
       - datanode2
+
+  # ── client ───────────────────────────────────────────────────────────────
+
+  client:
+    build:
+      context: ..
+      dockerfile: example/Dockerfile.client
+    hostname: client
+    networks:
+      - rustdfs
+    depends_on:
+      - namenode
+    tty: true

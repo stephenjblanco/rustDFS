@@ -1,21 +1,19 @@
-FROM python:3.12-slim
+# ── build stage ──────────────────────────────────────────────────────────────
+FROM rust:latest AS builder
 
-WORKDIR /client
+# protoc is required by tonic-prost-build
+RUN apt-get update && apt-get install -y protobuf-compiler && rm -rf /var/lib/apt/lists/*
 
-# install deps and generate stubs in one layer
-COPY test/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+WORKDIR /build
+COPY . .
+RUN cargo build --release --bin rustdfs-cli
 
-COPY proto/name_node.proto .
-RUN python -m grpc_tools.protoc \
-    -I . \
-    --python_out=. \
-    --grpc_python_out=. \
-    name_node.proto
+# ── runtime stage ─────────────────────────────────────────────────────────────
+FROM debian:bookworm-slim
 
-COPY test/client.py .
-COPY test/files/ files/
+RUN apt-get update \
+    && apt-get install -y ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-ENTRYPOINT ["python", "client.py"]
-# default target is the compose name node; override with --host / --port
-CMD ["--host", "namenode", "--port", "5000"]
+COPY --from=builder /build/example/files /usr/local/share/rustDFS/files
+COPY --from=builder /build/target/release/rustdfs-cli /usr/local/bin/rustdfs-cli

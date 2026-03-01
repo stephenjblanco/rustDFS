@@ -18,7 +18,7 @@ RUN apt-get update \
 RUN mkdir -p /etc/rustdfs /var/log/rustdfs /var/lib/rustdfs
 
 COPY --from=builder /build/target/release/rustDFS-namenode /usr/local/bin/rustDFS-namenode
-COPY test/rdfsconf.toml /etc/rustdfs/rdfsconf.toml
+COPY example/rdfsconf.toml /etc/rustdfs/rdfsconf.toml
 
 EXPOSE 5000
 

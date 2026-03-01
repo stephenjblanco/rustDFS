@@ -77,14 +77,14 @@ impl NameNode for NameNodeService {
 
                     writes.push( 
                         self.data_nodes
-                        .get_conn(&prim)?
-                        .write(
-                            DataWriteRequest {
-                                block_id: block_id,
-                                data: req.data,
-                                replica_node_ids: repls,
-                            }
-                        )
+                            .get_conn(&prim)?
+                            .write(
+                                DataWriteRequest {
+                                    block_id: block_id,
+                                    data: req.data,
+                                    replica_node_ids: repls,
+                                }
+                            )
                     );
                 }
                 Err(e) => {

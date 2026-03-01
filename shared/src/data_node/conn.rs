@@ -1,5 +1,5 @@
 use std::net::SocketAddr;
-use tokio::sync::RwLock;
+use tokio::sync::Mutex;
 use tonic::Status;
 use tonic::transport::{Channel, Endpoint};
 
@@ -16,7 +16,7 @@ pub struct DataNodeConn {
     id: String,
     host: String,
     port: u16,
-    client_ref: RwLock<Option<Client>>,
+    client_ref: Mutex<Option<Client>>,
 }
 
 impl DataNodeConn {
@@ -30,7 +30,7 @@ impl DataNodeConn {
             id: id,
             host: host,
             port: port,
-            client_ref: RwLock::new(None),
+            client_ref: Mutex::new(None),
         }
     }
 
@@ -42,7 +42,7 @@ impl DataNodeConn {
 
         Ok(
             self.client_ref
-                .write()
+                .lock()
                 .await
                 .as_mut()
                 .ok_or_else(|| status_err_writing(self))?
@@ -61,7 +61,7 @@ impl DataNodeConn {
 
         Ok(
             self.client_ref
-                .write()
+                .lock()
                 .await
                 .as_mut()
                 .ok_or_else(|| status_err_reading(self))?
@@ -80,7 +80,7 @@ impl DataNodeConn {
 
         Ok(
             self.client_ref
-                .write()
+                .lock()
                 .await
                 .as_mut()
                 .ok_or_else(|| status_err_ping(self))?
@@ -94,17 +94,13 @@ impl DataNodeConn {
     async fn init_conn(
         &self,
     ) -> ServiceResult<()> {
-        let client_opt = self.client_ref
-            .read()
+        let mut write_ref = self.client_ref
+            .lock()
             .await;
 
-        if client_opt.is_some() {
+        if write_ref.is_some() {
             return Ok(());
         }
-
-        let mut write_ref = self.client_ref
-            .write()
-            .await;
 
         *write_ref = Some(
             DataNodeClient::connect(self.to_endpoint()?)

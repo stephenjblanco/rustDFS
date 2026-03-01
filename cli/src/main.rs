@@ -24,4 +24,6 @@ async fn main() {
         Operation::Write => client.client_write(args).await,
         Operation::Read => client.client_read(args).await,
     }
+
+    println!("here");
 }
