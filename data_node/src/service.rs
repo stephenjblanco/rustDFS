@@ -45,8 +45,6 @@ impl DataNode for DataNodeService {
                 self.log_mgr.write(LogLevel::Error, || e.message.clone());
                 Status::invalid_argument(e.message.clone())
             })?;
-        
-        println!("Wrote block {} locally", request_ref.block_id);
 
         for id in request_ref.replica_node_ids.iter() {
             if id == &self.id {
