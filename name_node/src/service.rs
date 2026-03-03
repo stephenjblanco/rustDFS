@@ -208,7 +208,7 @@ impl NameNode for NameNodeService {
             }
 
             if !tasks.is_empty() {
-                drain_reads(&logger, &mut tasks, &mut tx).await;
+                let _ = drain_reads(&logger, &mut tasks, &mut tx).await;
             }
 
             logger.write(
