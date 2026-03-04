@@ -2,7 +2,6 @@ mod service;
 mod data_mgr;
 
 use rustdfs_shared::base::args::RustDFSArgs;
-use rustdfs_shared::base::result::Result;
 use rustdfs_shared::base::config::RustDFSConfig;
 use service::DataNodeService;
 
