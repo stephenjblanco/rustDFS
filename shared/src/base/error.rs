@@ -1,6 +1,7 @@
 use tonic::Status;
 use tonic::transport::Error as TonicError;
 use toml::de::Error as TomlError;
+use std::ffi::os_str::Display;
 use std::io::Error as IoError;
 
 #[derive(Debug)]

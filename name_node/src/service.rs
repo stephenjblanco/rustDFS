@@ -33,8 +33,8 @@ use crate::proto::NAME_FILE_DESCRIPTOR_SET;
 
 type ReadStream = Pin<Box<dyn Stream<Item = ServiceResult<NameReadResponse>> + Send>>;
 
-const WRITE_WINDOW: usize = 8;
-const READ_WINDOW: usize = 8;
+const WRITE_BUF_SIZE: usize = 8;
+const READ_BUF_SIZE: usize = 8;
 
 #[derive(Debug)]
 pub struct NameNodeService {
@@ -93,7 +93,7 @@ impl NameNode for NameNodeService {
                             )
                     ));
 
-                    if writes.len() >= WRITE_WINDOW {
+                    if writes.len() >= WRITE_BUF_SIZE {
                         drain_writes(&self.log_mgr, &mut writes).await?;
                     }
                 }
@@ -135,29 +135,30 @@ impl NameNode for NameNodeService {
         let req = request.into_inner();
         let (mut tx, rx) = mpsc::channel(128);
         let out = ReceiverStream::new(rx);
-        let nodes = Arc::clone(&self.data_nodes);
+        let node_mgr = Arc::clone(&self.data_nodes);
         let logger = self.log_mgr.clone();
 
-        let mut blocks = self.name_mgr
+        let blocks = self.name_mgr
             .get_blocks(&req.file_name)
             .await?
             .clone();
-        
-        blocks.shuffle(&mut rand::rng());
 
         tokio::spawn(async move {
             let mut tasks = Vec::new();
 
             for block in blocks.into_iter() {
-                let nodes = Arc::clone(&nodes);
+                let node_mgr = Arc::clone(&node_mgr);
                 let logger_clone = logger.clone();
 
                 tasks.push((
                     req.file_name.clone(),
                     block.id.clone(),
                     async move {
+                        let mut nodes = block.node_ids.clone();
+                        nodes.shuffle(&mut rand::rng());
+
                         for id in block.node_ids.iter() {
-                            let res = nodes
+                            let res = node_mgr
                                 .get_conn(&id)?
                                 .read(
                                     DataReadRequest { 
@@ -192,29 +193,29 @@ impl NameNode for NameNodeService {
                             }
                         }
 
-                        Err(Status::internal(block.id.clone()))
+                        Err(Status::internal(""))
                     }
                 ));
 
-                if tasks.len() >= READ_WINDOW {
-                    let err = drain_reads(&logger, &mut tasks, &mut tx)
-                        .await
-                        .is_err();
-
-                    if err {
-                        return;
+                if tasks.len() >= READ_BUF_SIZE {
+                    match drain_reads(&logger, &mut tasks, &mut tx).await {
+                        Ok(_) => {}
+                        Err(_) => return,
                     }
                 }
             }
 
             if !tasks.is_empty() {
-                let _ = drain_reads(&logger, &mut tasks, &mut tx).await;
+                match drain_reads(&logger, &mut tasks, &mut tx).await {
+                    Ok(_) => {}
+                    Err(_) => return,
+                }
             }
 
             logger.write(
                 LogLevel::Info, 
                 || format!(
-                    "Finished reading file {} from data nodes", 
+                    "Finished reading file {}", 
                     req.file_name
                 )
             );

@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use futures::future::join_all;
-
 use tonic::{Request, Response, Status};
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
@@ -16,7 +15,6 @@ use rustdfs_shared::data_node::mgr::DataNodeManager;
 use rustdfs_shared::data_node::proto::data_node_server::{DataNode, DataNodeServer};
 use rustdfs_shared::data_node::proto::{DataWriteRequest, DataWriteResponse, DataReadRequest, DataReadResponse, DataPing};
 use rustdfs_shared::data_node::proto::DATA_FILE_DESCRIPTOR_SET;
-
 use crate::data_mgr::DataDirManager;
 
 #[derive(Debug)]
@@ -42,8 +40,10 @@ impl DataNode for DataNodeService {
         self.data_mgr
             .write_block(&request_ref.block_id, &request_ref.data)
             .map_err(|e| {
+                let err = status_err_writing(&request_ref.block_id);
                 self.log_mgr.write(LogLevel::Error, || e.message.clone());
-                Status::invalid_argument(e.message.clone())
+                self.log_mgr.write(LogLevel::Error, || err.message().to_string());
+                err
             })?;
 
         for id in request_ref.replica_node_ids.iter() {
@@ -77,18 +77,27 @@ impl DataNode for DataNodeService {
             .collect::<Vec<_>>();
 
         if failed.len() > 0 {
-            let ids_str = failed.join(",");
-            let log = format!("Error forwarding write to replica (block = {}) (nodes = {})", request_ref.block_id, ids_str);
-            self.log_mgr.write(LogLevel::Error, || log.clone());
-            return Err(Status::internal(log));
+            let err = status_err_forwarding(&failed);
+            self.log_mgr.write(LogLevel::Error, || err.message().to_string());
+            return Err(err);
         }
 
         self.log_mgr.write(
             LogLevel::Info, 
-            || format!("Wrote block {} with {} bytes", request_ref.block_id, request_ref.data.len())
+            || format!(
+                "Wrote block {} with {} bytes", 
+                request_ref.block_id, 
+                request_ref.data.len()
+            )
         );
 
-        Ok(Response::new(DataWriteResponse { success: true }))
+        Ok(
+            Response::new(
+                DataWriteResponse { 
+                    success: true 
+                }
+            )
+        )
     }
 
     async fn read(
@@ -96,11 +105,12 @@ impl DataNode for DataNodeService {
         request: Request<DataReadRequest>,
     ) -> ServiceResult<Response<DataReadResponse>> {
         let request_ref = request.get_ref();
-        let data: Vec<u8> = self.data_mgr.read_block(&request_ref.block_id)
+        let data: Vec<u8> = self.data_mgr
+            .read_block(&request_ref.block_id)
             .map_err(|_| {
-                let log = format!("Block not found: {}", request_ref.block_id);
-                self.log_mgr.write(LogLevel::Error, || log.clone());
-                Status::not_found(log)
+                let err = status_invalid_block(&request_ref.block_id);
+                self.log_mgr.write(LogLevel::Error, || err.message().to_string());
+                err
             })?;
         
         self.log_mgr.write(
@@ -108,7 +118,13 @@ impl DataNode for DataNodeService {
             || format!("Read block {} with {} bytes", request_ref.block_id, data.len())
         );
 
-        Ok(Response::new(DataReadResponse { data: data }))
+        Ok(
+            Response::new(
+                DataReadResponse { 
+                    data: data 
+                }
+            )
+        )
     }
 
     async fn ping(
@@ -219,4 +235,26 @@ impl DataNodeService {
 
         Ok(())
     }
+}
+
+fn status_err_writing(
+    block_id: &str,
+) -> Status {
+    let log = format!("Error writing block: {}", block_id);
+    Status::internal(log)
+}
+
+fn status_err_forwarding(
+    nodes: &Vec<String>,
+) -> Status {
+    let ids_str = nodes.join(",");
+    let log = format!("Error forwarding to data nodes: {}", ids_str);
+    Status::internal(log)
+}
+
+fn status_invalid_block(
+    block_id: &str,
+) -> Status {
+    let log = format!("Invalid block ID: {}", block_id);
+    Status::invalid_argument(log)
 }

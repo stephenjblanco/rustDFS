@@ -4,7 +4,6 @@ use std::path::Path;
 
 use rustdfs_shared::base::error::RustDFSError;
 use rustdfs_shared::base::result::Result;
-
 #[derive(Debug)]
 pub struct DataDirManager {
     path: String,
@@ -17,7 +16,7 @@ impl DataDirManager {
     ) -> Result<Self> {
         let path = Path::new(path_str);
 
-        if path.exists() {
+        if path.exists() && !path.is_dir() {
             if !path.is_dir() {
                 return Err(
                     RustDFSError::err_invalid_data_dir(path_str)
