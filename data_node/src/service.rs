@@ -81,9 +81,9 @@ impl DataNode for DataNodeService {
         self.log_mgr.write(
             LogLevel::Info, 
             || format!(
-                "Wrote block {} with {} bytes", 
+                "Wrote block {} with {}", 
                 request_ref.block_id, 
-                request_ref.data.len()
+                format_bytes(request_ref.data.len())
             )
         );
 
