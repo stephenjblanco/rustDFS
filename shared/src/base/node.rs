@@ -20,9 +20,16 @@ impl Node for GenericNode {
     ) -> Result<SocketAddr> {
         let addr_str = format!("{}:{}", self.host, self.port);
         addr_str.to_socket_addrs()
-            .map_err(|e| RustDFSError::err_invalid_addr_io(e))?
+            .map_err(|e| RustDFSError::IoError(e))?
             .next()
-            .ok_or_else(|| RustDFSError::err_invalid_addr(&self.host, self.port))
+            .ok_or_else(|| err_invalid_addr(&self.host, self.port))
     }
 }
 
+fn err_invalid_addr(
+    host: &str,
+    port: u16,
+) -> RustDFSError {
+    let str = format!("Invalid address: {}:{}", host, port);
+    RustDFSError::CustomError(str)
+}

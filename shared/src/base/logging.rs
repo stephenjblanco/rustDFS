@@ -2,6 +2,7 @@ use clap::ValueEnum;
 use chrono::Local;
 use std::fs::{self, write};
 use std::path::Path;
+use tonic::Status;
 
 use super::error::RustDFSError;
 use super::result::Result;
@@ -33,10 +34,7 @@ impl LogManager {
 
         if !parent.as_os_str().is_empty() && !parent.is_dir() {
             fs::create_dir_all(parent)
-                .map_err(|e| RustDFSError::err_create_log_dir(
-                    parent.to_str().unwrap_or(&file),
-                    e,
-                ))?;
+                .map_err(|e| RustDFSError::IoError(e))?;
         }
 
         Ok(
@@ -69,6 +67,26 @@ impl LogManager {
                 _ => println!("[{}] [{:?}] {}", ts, level, msg),
             }
         }
+    }
+
+    pub fn write_err(
+        &self,
+        err: &RustDFSError,
+    ) {
+        self.write(
+            LogLevel::Error,
+            || err.to_string(),
+        );
+    }
+
+    pub fn write_status(
+        &self,
+        status: &Status,
+    ) {
+        self.write(
+            LogLevel::Error,
+            || status.message().to_string(),
+        );
     }
 }
 

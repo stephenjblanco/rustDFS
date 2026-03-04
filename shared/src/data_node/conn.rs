@@ -7,7 +7,7 @@ use crate::base::node::{GenericNode, Node};
 use crate::base::result::{Result, ServiceResult};
 
 use super::proto::data_node_client::DataNodeClient;
-use super::proto::{DataWriteRequest, DataWriteResponse, DataReadRequest, DataReadResponse, DataPing};
+use super::proto::{DataWriteRequest, DataWriteResponse, DataReadRequest, DataReadResponse};
 
 type Client = DataNodeClient<Channel>;
 
@@ -68,25 +68,6 @@ impl DataNodeConn {
                 .read(request)
                 .await
                 .map_err(|_| status_err_reading(self))?
-                .into_inner()
-        )
-    }
-
-    pub async fn ping(
-        &self, 
-        request: DataPing,
-    ) -> ServiceResult<DataPing> {
-        self.init_conn().await?;
-
-        Ok(
-            self.client_ref
-                .lock()
-                .await
-                .as_mut()
-                .ok_or_else(|| status_err_ping(self))?
-                .ping(request)
-                .await
-                .map_err(|_| status_err_ping(self))?
                 .into_inner()
         )
     }

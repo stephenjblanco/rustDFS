@@ -5,7 +5,6 @@ package data_node;
 service DataNode {
     rpc Write (DataWriteRequest) returns (DataWriteResponse);
     rpc Read (DataReadRequest) returns (DataReadResponse);
-    rpc Ping (DataPing) returns (DataPing);
 }
 
 message DataWriteRequest {
@@ -24,9 +23,4 @@ message DataReadRequest {
 
 message DataReadResponse {
     bytes data = 1;
-}
-
-message DataPing {
-    string nodeID = 1;
-    int64 timestamp = 2;
 }

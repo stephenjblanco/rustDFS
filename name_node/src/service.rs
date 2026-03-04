@@ -172,7 +172,7 @@ impl NameNode for NameNodeService {
                                     logger_clone.write(
                                         LogLevel::Debug, 
                                         || format!(
-                                            "Read block from data node (block = {}, node = {})", 
+                                            "Read block {} from data node {}", 
                                             block.id, 
                                             id
                                         )
@@ -181,19 +181,12 @@ impl NameNode for NameNodeService {
                                     return Ok(data);
                                 }
                                 Err(e) => {
-                                    logger_clone.write(
-                                        LogLevel::Error, 
-                                        || format!(
-                                            "Error reading from data node {}: {}", 
-                                            id, 
-                                            e.message()
-                                        )
-                                    );
+                                    logger_clone.write_status(&e);
                                 }
                             }
                         }
 
-                        Err(Status::internal(""))
+                        Err(status_err_reading(block.id))
                     }
                 ));
 
@@ -250,7 +243,7 @@ impl NameNodeService {
         }
 
         if node.is_none() || log_file.is_none() {
-            return Err(RustDFSError::err_misconfigured_svc_data());
+            return Err(err_misconfigured_svc());
         }
 
         for (k, dn_config) in config.data_nodes {
@@ -261,6 +254,12 @@ impl NameNodeService {
             ));
         }
 
+        let logger = LogManager::new(
+            log_file.clone().unwrap(),
+            args.log_level,
+            args.silent,
+        )?;
+
         Ok(
             NameNodeService {
                 id: args.id,
@@ -270,13 +269,10 @@ impl NameNodeService {
                 data_nodes: Arc::new(
                     DataNodeManager::new(
                         data_nodes,
+                        logger.clone(),
                     )
                 ),
-                log_mgr: LogManager::new(
-                    log_file.unwrap(),
-                    args.log_level,
-                    args.silent,
-                )?,
+                log_mgr: logger,
             }
         )
     }
@@ -284,7 +280,8 @@ impl NameNodeService {
     pub async fn serve(
         self,
     ) -> Result<()> {
-        let addr: std::net::SocketAddr = self.self_node.to_socket_addr()?;
+        let addr = self.self_node.to_socket_addr()?;
+        let logger = self.log_mgr.clone();
 
         // should remove this or make it optional via config
         // only added this for testing
@@ -293,7 +290,7 @@ impl NameNodeService {
             .build_v1()
             .unwrap();
 
-        self.log_mgr.write(
+        logger.write(
             LogLevel::Info, 
             || format!(
                 "Starting NameNodeServer with ID {} at {} on port {}", 
@@ -308,7 +305,11 @@ impl NameNodeService {
             .add_service(NameNodeServer::new(self))
             .serve(addr)
             .await
-            .map_err(|e| { RustDFSError::err_serving_data(e) })?;
+            .map_err(|e| { 
+                let err = RustDFSError::TonicError(e);
+                logger.write_err(&err);
+                err
+            })?;
 
         Ok(())
     }
@@ -400,24 +401,23 @@ async fn drain_reads<T>(
                     return Err(status);
                 }
             }
-            Err(_) => {
-                let status = status_err_reading(block);
-
-                logger.write(
-                    LogLevel::Error, 
-                    || status.message().to_string()
-                );
+            Err(e) => {
+                logger.write_status(&e);
 
                 let _ = tx.send(
-                    Err(status.clone())
+                    Err(e.clone())
                 ).await;
 
-                return Err(status);
+                return Err(e);
             }
         }
     }
 
     Ok(())
+}
+
+fn err_misconfigured_svc() -> RustDFSError {
+    RustDFSError::CustomError("Misconfigured Name Node service".to_string())
 }
 
 fn status_misconfigured_svc() -> Status {

@@ -13,7 +13,7 @@ use rustdfs_shared::base::node::{GenericNode, Node};
 use rustdfs_shared::data_node::conn::DataNodeConn;
 use rustdfs_shared::data_node::mgr::DataNodeManager;
 use rustdfs_shared::data_node::proto::data_node_server::{DataNode, DataNodeServer};
-use rustdfs_shared::data_node::proto::{DataWriteRequest, DataWriteResponse, DataReadRequest, DataReadResponse, DataPing};
+use rustdfs_shared::data_node::proto::{DataWriteRequest, DataWriteResponse, DataReadRequest, DataReadResponse};
 use rustdfs_shared::data_node::proto::DATA_FILE_DESCRIPTOR_SET;
 use crate::data_mgr::DataDirManager;
 
@@ -38,13 +38,7 @@ impl DataNode for DataNodeService {
         let mut ids = Vec::new();
 
         self.data_mgr
-            .write_block(&request_ref.block_id, &request_ref.data)
-            .map_err(|e| {
-                let err = status_err_writing(&request_ref.block_id);
-                self.log_mgr.write(LogLevel::Error, || e.message.clone());
-                self.log_mgr.write(LogLevel::Error, || err.message().to_string());
-                err
-            })?;
+            .write_block(&request_ref.block_id, &request_ref.data)?;
 
         for id in request_ref.replica_node_ids.iter() {
             if id == &self.id {
@@ -72,13 +66,15 @@ impl DataNode for DataNodeService {
             .await
             .into_iter()
             .enumerate()
-            .filter(|(_, r)| r.is_err() || r.as_ref().unwrap().success == false)
+            .filter(|(_, r)| {
+                r.is_err() || r.as_ref().unwrap().success == false
+            })
             .map(|(i, _)| ids[i].clone())
             .collect::<Vec<_>>();
 
         if failed.len() > 0 {
             let err = status_err_forwarding(&failed);
-            self.log_mgr.write(LogLevel::Error, || err.message().to_string());
+            self.log_mgr.write_status(&err);
             return Err(err);
         }
 
@@ -106,16 +102,15 @@ impl DataNode for DataNodeService {
     ) -> ServiceResult<Response<DataReadResponse>> {
         let request_ref = request.get_ref();
         let data: Vec<u8> = self.data_mgr
-            .read_block(&request_ref.block_id)
-            .map_err(|_| {
-                let err = status_invalid_block(&request_ref.block_id);
-                self.log_mgr.write(LogLevel::Error, || err.message().to_string());
-                err
-            })?;
+            .read_block(&request_ref.block_id)?;
         
         self.log_mgr.write(
             LogLevel::Info, 
-            || format!("Read block {} with {} bytes", request_ref.block_id, data.len())
+            || format!(
+                "Read block {} with {} bytes", 
+                request_ref.block_id, 
+                data.len()
+            )
         );
 
         Ok(
@@ -126,26 +121,6 @@ impl DataNode for DataNodeService {
             )
         )
     }
-
-    async fn ping(
-        &self,
-        request: Request<DataPing>,
-    ) -> ServiceResult<Response<DataPing>> {
-        self.log_mgr.write(
-            LogLevel::Info, 
-            || format!("Received ping from node {}", request.get_ref().node_id)
-        );
-
-        let reply = DataPing {
-            node_id: self.id.clone(),
-            timestamp: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs() as i64,
-        };
-
-        Ok(Response::new(reply))
-    }
 }
 
 impl DataNodeService {
@@ -154,10 +129,10 @@ impl DataNodeService {
         args: RustDFSArgs,
         config: RustDFSConfig,
     ) -> Result<Self> {
-        let mut data_dir: Option<String> = None;
-        let mut data_nodes: HashMap<String, DataNodeConn> = HashMap::new();
-        let mut log_file: Option<String> = None;
-        let mut node: Option<GenericNode> = None;
+        let mut data_dir = None;
+        let mut data_nodes = HashMap::new();
+        let mut log_file = None;
+        let mut node = None;
 
         for (k, dn_config) in config.data_nodes {
             if args.id == k {
@@ -180,10 +155,14 @@ impl DataNodeService {
         }
 
         if node.is_none() || data_dir.is_none() || log_file.is_none() {
-            return Err(
-                RustDFSError::err_misconfigured_svc_data()
-            );
+            return Err(err_misconfigured_svc());
         }
+
+        let logger = LogManager::new(
+            log_file.clone().unwrap(),
+            args.log_level,
+            args.silent,
+        )?;
 
         Ok(
             DataNodeService {
@@ -191,15 +170,13 @@ impl DataNodeService {
                 self_node: node.unwrap(),
                 data_nodes: DataNodeManager::new(
                     data_nodes,
+                    logger.clone(),
                 ),
                 data_mgr: DataDirManager::new(
-                    &data_dir.unwrap()
+                    &data_dir.unwrap(),
+                    logger.clone(),
                 )?,
-                log_mgr: LogManager::new(
-                    log_file.unwrap(),
-                    args.log_level,
-                    args.silent,
-                )?,
+                log_mgr: logger,
             }
         )
     }
@@ -208,6 +185,7 @@ impl DataNodeService {
         self,
     ) -> Result<()> {
         let addr: std::net::SocketAddr = self.self_node.to_socket_addr()?;
+        let logger = self.log_mgr.clone();
 
         // should remove this or make it optional via config
         // only added this for testing
@@ -216,7 +194,7 @@ impl DataNodeService {
             .build_v1()
             .unwrap();
 
-        self.log_mgr.write(
+        logger.write(
             LogLevel::Info, 
             || format!(
                 "Starting DataNodeServer with ID {} at {} on port {}", 
@@ -231,17 +209,18 @@ impl DataNodeService {
             .add_service(DataNodeServer::new(self))
             .serve(addr)
             .await
-            .map_err(|e| { RustDFSError::err_serving_data(e) })?;
+            .map_err(|e| { 
+                let err = RustDFSError::TonicError(e);
+                logger.write_err(&err);
+                err
+            })?;
 
         Ok(())
     }
 }
 
-fn status_err_writing(
-    block_id: &str,
-) -> Status {
-    let log = format!("Error writing block: {}", block_id);
-    Status::internal(log)
+fn err_misconfigured_svc() -> RustDFSError {
+    RustDFSError::CustomError("Misconfigured Data Node service".to_string())
 }
 
 fn status_err_forwarding(
@@ -250,11 +229,4 @@ fn status_err_forwarding(
     let ids_str = nodes.join(",");
     let log = format!("Error forwarding to data nodes: {}", ids_str);
     Status::internal(log)
-}
-
-fn status_invalid_block(
-    block_id: &str,
-) -> Status {
-    let log = format!("Invalid block ID: {}", block_id);
-    Status::invalid_argument(log)
 }
