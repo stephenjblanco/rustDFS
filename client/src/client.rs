@@ -1,5 +1,6 @@
+use std::path::Path;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::fs::File;
+use tokio::fs::{self, File};
 use tonic::transport::Channel;
 use futures::stream;
 use futures::StreamExt;
@@ -59,9 +60,13 @@ impl RustDFSClient for NameNodeClient<Channel> {
                 file_name: args.source,
             }
         )
-        .await
-        .unwrap()
-        .into_inner();
+            .await
+            .unwrap()
+            .into_inner();
+
+        if let Some(parent) = Path::new(&args.dest).parent() {
+            fs::create_dir_all(parent).await.unwrap();
+        }
 
         let mut file = File::create(&args.dest)
             .await

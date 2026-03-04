@@ -107,9 +107,9 @@ impl DataNode for DataNodeService {
         self.log_mgr.write(
             LogLevel::Info, 
             || format!(
-                "Read block {} with {} bytes", 
+                "Read block {} with {}", 
                 request_ref.block_id, 
-                data.len()
+                format_bytes(data.len())
             )
         );
 
@@ -216,6 +216,19 @@ impl DataNodeService {
             })?;
 
         Ok(())
+    }
+}
+
+fn format_bytes(bytes: usize) -> String {
+    const KB: usize = 1024;
+    const MB: usize = 1024 * KB;
+
+    if bytes >= MB {
+        format!("{:.2} MB", bytes as f64 / MB as f64)
+    } else if bytes >= KB {
+        format!("{:.2} KB", bytes as f64 / KB as f64)
+    } else {
+        format!("{} B", bytes)
     }
 }
 

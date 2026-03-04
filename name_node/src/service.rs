@@ -114,7 +114,7 @@ impl NameNode for NameNodeService {
         self.log_mgr.write(
             LogLevel::Info, 
             || format!(
-                "Wrote file {} to data nodes", 
+                "Finished writing file {}", 
                 name.unwrap()
             )
         );
