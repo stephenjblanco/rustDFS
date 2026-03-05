@@ -3,7 +3,7 @@ set -x
 
 image_build() {
     docker build \
-        -f .env/Dockerfile \
+        -f .devcontainer/Dockerfile \
         -t rustdfs-env:latest .
 }
 
