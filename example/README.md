@@ -16,7 +16,7 @@ A Docker Compose setup that spins up a full rustDFS cluster and runs a read / wr
 └─────────────────┘ └─────────────────┘ └─────────────────┘
 ```
 
-The cluster is configured with a replica count of 2. This means that for any write, there will be 1 primary node and 2 replicas. All nodes communicate over a shared `rustdfs` bridge network.
+The cluster is configured with a replica count of 2. This means that for any block written, there will be 1 primary node and 2 replicas. All nodes communicate over a shared `rustdfs` bridge network.
 
 ## Running
 
