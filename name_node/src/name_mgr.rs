@@ -22,9 +22,6 @@ pub struct BlockDescriptor {
 impl NameManager {
     /**
      * Creates a new NameManager instance.
-     *
-     * This is going to have to handle loading persisted
-     * name data on init.
      */
     pub fn new() -> Self {
         NameManager {
