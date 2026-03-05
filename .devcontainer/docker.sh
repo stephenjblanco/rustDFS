@@ -7,6 +7,7 @@ image_build() {
         -t rustdfs-env:latest .
 }
 
+
 image_run() {
     docker run -P --rm -it \
         -v "$(pwd)":/root/rustDFS \
