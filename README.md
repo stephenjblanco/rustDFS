@@ -28,15 +28,20 @@ Files are split into 2 MB blocks, distributed across multiple data nodes with co
 3. Blocks are read from data nodes with failover across replicas (randomized order).
 4. Data is streamed back to the client.
 
-## Prerequisites
+## Building
+
+The project is built with the following tools:
 
 - **Rust** (edition 2024)
 - **protoc** (Protocol Buffers compiler) → required by `tonic-build` / `prost-build`
 
-Install `protoc` on Debian/Ubuntu:
+The `.devcontainer` directory provides tools for building / running rustDFS locally. This includes a Dockerfile with the required dependencies and additional dev tools. 
+
+The container can be built / run using the provided `docker.sh`.
 
 ```bash
-apt install -y protobuf-compiler
+bash .devcontainer/docker.sh build
+bash .devcontainer/docker.sh run
 ```
 
 ## Building
