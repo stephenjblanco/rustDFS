@@ -52,7 +52,7 @@ impl LogManager {
         let parent = path.parent().unwrap_or(Path::new(""));
 
         if !parent.as_os_str().is_empty() && !parent.is_dir() {
-            fs::create_dir_all(parent).map_err(|e| RustDFSError::IoError(e))?;
+            fs::create_dir_all(parent).map_err(RustDFSError::IoError)?;
         }
 
         Ok(LogManager {

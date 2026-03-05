@@ -42,9 +42,9 @@ impl DataNodeConn {
      */
     pub fn new(id: String, host: String, port: u16) -> Self {
         DataNodeConn {
-            id: id,
-            host: host,
-            port: port,
+            id,
+            host,
+            port,
             client_ref: Mutex::new(None),
         }
     }
@@ -124,7 +124,7 @@ impl From<&DataNodeConn> for ServiceResult<Endpoint> {
             Into::<Result<SocketAddr>>::into(node).map_err(|_| status_invalid_addr(&node.id))?;
         let endpoint = format!("http://{}", socket_addr);
 
-        Ok(Endpoint::from_shared(endpoint).map_err(|_| status_invalid_addr(&node.id))?)
+        Endpoint::from_shared(endpoint).map_err(|_| status_invalid_addr(&node.id))
     }
 }
 
@@ -160,8 +160,8 @@ impl DataNodeManager {
      */
     pub fn new(connections: HashMap<String, DataNodeConn>, log_mgr: LogManager) -> Self {
         DataNodeManager {
-            connections: connections,
-            log_mgr: log_mgr,
+            connections,
+            log_mgr,
         }
     }
 

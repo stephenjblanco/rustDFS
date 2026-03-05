@@ -96,7 +96,7 @@ impl NameNode for NameNodeService {
                         prim.clone(),
                         block_id.clone(),
                         self.data_nodes.get_conn(&prim)?.write(DataWriteRequest {
-                            block_id: block_id,
+                            block_id,
                             data: req.data,
                             replica_node_ids: repls,
                         }),
@@ -155,7 +155,7 @@ impl NameNode for NameNodeService {
 
                     for id in block.node_ids.iter() {
                         let res = node_mgr
-                            .get_conn(&id)?
+                            .get_conn(id)?
                             .read(DataReadRequest {
                                 block_id: block.id.clone(),
                             })
@@ -270,7 +270,7 @@ impl NameNodeService {
             format!(
                 "Starting NameNodeServer with ID {} at {} on port {}",
                 self.id,
-                addr.ip().to_string(),
+                addr.ip(),
                 addr.port()
             )
         });

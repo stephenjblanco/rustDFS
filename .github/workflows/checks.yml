@@ -1,0 +1,38 @@
+name: checks
+run-name: checks
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: build
+        uses: ./.github/workflows/build-action
+        with:
+          command: cargo build --all-features --verbose
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: clippy
+        uses: ./.github/workflows/build-action
+        with:
+          command: |
+            rustup component add clippy && \
+              cargo clippy --all-targets --all-features -- -D warnings
+  rustfmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: rustfmt
+        uses: ./.github/workflows/build-action
+        with:
+          command: |
+            rustup component add rustfmt && \
+              cargo fmt --all -- --check
