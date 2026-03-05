@@ -3,8 +3,8 @@ mod client;
 mod proto;
 
 use std::net::ToSocketAddrs;
-    
-use args::{RustDFSArgs, Operation};
+
+use args::{Operation, RustDFSArgs};
 use client::RustDFSClient;
 use proto::name_node_client::NameNodeClient;
 
@@ -16,9 +16,7 @@ async fn main() {
 
     println!("Connecting to NameNode at {}", addr_str);
 
-    let mut client = NameNodeClient::connect(addr_str)
-        .await
-        .unwrap();
+    let mut client = NameNodeClient::connect(addr_str).await.unwrap();
 
     match args.op {
         Operation::Write => client.client_write(args).await,

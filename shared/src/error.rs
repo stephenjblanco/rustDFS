@@ -1,11 +1,11 @@
 use std::fmt::{Display, Formatter, Result};
-use toml::de::Error as TomlError;
 use std::io::Error as IoError;
+use toml::de::Error as TomlError;
 use tonic::transport::Error as TonicError;
 
 /**
  * Custom error type for RustDFS.
- * 
+ *
  *  @variant IoError - Represents I/O related errors.
  *  @variant TonicError - Represents errors from the Tonic gRPC library.
  *  @variant TomlError - Represents errors during TOML parsing.

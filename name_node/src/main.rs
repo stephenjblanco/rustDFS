@@ -1,6 +1,6 @@
+mod name_mgr;
 mod proto;
 mod service;
-mod name_mgr;
 
 use rustdfs_shared::args::RustDFSArgs;
 use rustdfs_shared::config::RustDFSConfig;

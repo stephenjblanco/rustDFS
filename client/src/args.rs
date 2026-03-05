@@ -26,7 +26,6 @@ pub struct RustDFSArgs {
 }
 
 impl RustDFSArgs {
-
     pub fn new() -> Self {
         Self::parse()
     }

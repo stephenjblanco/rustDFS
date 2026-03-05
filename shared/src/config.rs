@@ -1,7 +1,7 @@
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use serde::Deserialize;
 use toml;
 
 use super::error::RustDFSError;
@@ -14,22 +14,22 @@ const DATA_DIR_GLOBAL: &str = "/var/lib/rustdfs/data";
 
 /**
  * Configuration structure for RustDFS. Corresponds to TOML config file.
- * 
+ *
  *  @field replica_count - Number of replicas for each data block.
  *  @field name_nodes - Mapping of name node IDs to their configurations.
  *  @field data_nodes - Mapping of data node IDs to their configurations.
- * 
+ *
  * Sample TOML structure:
- * 
+ *
  * ```toml
  *  replica-count = 0
- * 
+ *
  *  [name-node.nn1]
  *  host = namenode1
  *  port = 50051
  *  name-file = "/path/to/namefile"
  *  log-file = "/path/to/logfile"
- * 
+ *
  *  [data-node.dn1]
  *  host = datanode1
  *  port = 50052
@@ -51,7 +51,7 @@ pub struct RustDFSConfig {
 
 /**
  * Configuration for a Name Node.
- * 
+ *
  *  @field host - Hostname or IP address of the name node.
  *  @field port - Port number for the name node service.
  *  @field name_file - Path to the name file for persistence.
@@ -74,7 +74,7 @@ pub struct NameNodeConfig {
 
 /**
  * Configuration for a Data Node.
- * 
+ *
  *  @field host - Hostname or IP address of the data node.
  *  @field port - Port number for the data node service.
  *  @field data_dir - Directory path for storing data blocks.
@@ -96,10 +96,9 @@ pub struct DataNodeConfig {
 }
 
 impl RustDFSConfig {
-
     /**
      * Loads the RustDFS configuration from the default global config file.
-     * 
+     *
      *  @return Result<RustDFSConfig> - Loaded configuration or error.
      */
     pub fn new() -> Result<Self> {
@@ -109,8 +108,7 @@ impl RustDFSConfig {
     // Extracts and parses the configuration from the specified file path.
     fn extract_to_config(path: &str) -> Result<Self> {
         let contents: String = Self::extract_to_string(path)?;
-        let res: Self = toml::from_str(&contents)
-            .map_err(|e| { RustDFSError::TomlError(e) })?;
+        let res: Self = toml::from_str(&contents).map_err(|e| RustDFSError::TomlError(e))?;
 
         return Ok(res);
     }

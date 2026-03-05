@@ -1,5 +1,5 @@
-mod service;
 mod data_mgr;
+mod service;
 
 use rustdfs_shared::args::RustDFSArgs;
 use rustdfs_shared::config::RustDFSConfig;

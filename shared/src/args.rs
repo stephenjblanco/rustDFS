@@ -4,11 +4,11 @@ use super::logging::LogLevel;
 
 /**
  * Command line arguments for RustDFS name node.
- * 
+ *
  *  @field id - Unique identifier for the name node.
  *  @field silent - If true, suppresses console output.
  *  @field log_level - Logging level for the name node.
- * 
+ *
  * CLI Usage:
  *  rustdfs-<BIN_TYPE> --id <NODE_ID> [--silent] [--log-level <LOG_LEVEL>]
  */
@@ -26,7 +26,6 @@ pub struct RustDFSArgs {
 }
 
 impl RustDFSArgs {
-
     pub fn new() -> Self {
         Self::parse()
     }

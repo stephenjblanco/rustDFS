@@ -12,22 +12,19 @@ pub struct GenericNode {
     pub port: u16,
 }
 
- // Convert GenericNode to [SocketAddr]
+// Convert GenericNode to [SocketAddr]
 impl From<&GenericNode> for Result<SocketAddr> {
-
     fn from(node: &GenericNode) -> Self {
         let addr_str = format!("{}:{}", node.host, node.port);
-        addr_str.to_socket_addrs()
+        addr_str
+            .to_socket_addrs()
             .map_err(|e| RustDFSError::IoError(e))?
             .next()
             .ok_or_else(|| err_invalid_addr(&node.host, node.port))
     }
 }
 
-fn err_invalid_addr(
-    host: &str,
-    port: u16,
-) -> RustDFSError {
+fn err_invalid_addr(host: &str, port: u16) -> RustDFSError {
     let str = format!("Invalid address: {}:{}", host, port);
     RustDFSError::CustomError(str)
 }

@@ -1,5 +1,5 @@
-use clap::ValueEnum;
 use chrono::Local;
+use clap::ValueEnum;
 use std::fs::{self, write};
 use std::path::Path;
 use tonic::Status;
@@ -11,7 +11,7 @@ use super::result::Result;
  * Manages logging operations for RustDFS.
  * Responsible for writing log messages to a specified log file with different log levels.
  * Also supports console output.
- * 
+ *
  *  @field file - Path to the log file.
  *  @field level - Minimum log level to record.
  *  @field silent - If true, suppresses console output.
@@ -25,7 +25,7 @@ pub struct LogManager {
 
 /**
  * Log levels for RustDFS logging.
- * 
+ *
  *  @variant Error - Logs only error messages.
  *  @variant Info - Logs informational messages and errors.
  *  @variant Debug - Logs debug messages, informational messages, and errors.
@@ -38,57 +38,43 @@ pub enum LogLevel {
 }
 
 impl LogManager {
-
     /**
      * Creates a new LogManager instance.
      * Ensures the log file's parent directory exists.
-     * 
+     *
      *  @param file - Path to the log file.
      *  @param level - Minimum log level to record.
      *  @param silent - If true, suppresses console output.
      *  @return Result<LogManager> - Initialized LogManager instance or error.
      */
-    pub fn new(
-        file: String, 
-        level: LogLevel, 
-        silent: bool
-    ) -> Result<Self> {
+    pub fn new(file: String, level: LogLevel, silent: bool) -> Result<Self> {
         let path = Path::new(&file);
-        let parent = path.parent()
-            .unwrap_or(Path::new(""));
+        let parent = path.parent().unwrap_or(Path::new(""));
 
         if !parent.as_os_str().is_empty() && !parent.is_dir() {
-            fs::create_dir_all(parent)
-                .map_err(|e| RustDFSError::IoError(e))?;
+            fs::create_dir_all(parent).map_err(|e| RustDFSError::IoError(e))?;
         }
 
-        Ok(
-            LogManager {
-                file,
-                level,
-                silent,
-            }
-        )
+        Ok(LogManager {
+            file,
+            level,
+            silent,
+        })
     }
 
     /**
      * Writes a log message to the log file and optionally to the console.
-     * 
+     *
      *  @param level - Log level of the message.
      *  @param provider - Closure that provides the log message string.
      */
-    pub fn write(
-        &self,
-        level: LogLevel, 
-        provider: impl FnOnce() -> String,
-    ) {
+    pub fn write(&self, level: LogLevel, provider: impl FnOnce() -> String) {
         if level > self.level {
             return;
         }
 
         let msg = provider();
-        let ts = Local::now()
-            .format("%Y-%m-%d %H:%M:%S");
+        let ts = Local::now().format("%Y-%m-%d %H:%M:%S");
 
         let _ = write(&self.file, format!("[{}] [{:?}] {}", ts, level, msg));
 
@@ -103,27 +89,14 @@ impl LogManager {
     /**
      * Logs a [RustDFSError] instance.
      */
-    pub fn write_err(
-        &self,
-        err: &RustDFSError,
-    ) {
-        self.write(
-            LogLevel::Error,
-            || err.to_string(),
-        );
+    pub fn write_err(&self, err: &RustDFSError) {
+        self.write(LogLevel::Error, || err.to_string());
     }
 
     /**
      * Logs a tonic [Status] instance.
      */
-    pub fn write_status(
-        &self,
-        status: &Status,
-    ) {
-        self.write(
-            LogLevel::Error,
-            || status.message().to_string(),
-        );
+    pub fn write_status(&self, status: &Status) {
+        self.write(LogLevel::Error, || status.message().to_string());
     }
 }
-
