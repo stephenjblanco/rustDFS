@@ -102,15 +102,15 @@ impl RustDFSConfig {
      *  @return Result<RustDFSConfig> - Loaded configuration or error.
      */
     pub fn new() -> Result<Self> {
-        return Self::extract_to_config(CONFIG_FILE_GLOBAL);
+        Self::extract_to_config(CONFIG_FILE_GLOBAL)
     }
 
     // Extracts and parses the configuration from the specified file path.
     fn extract_to_config(path: &str) -> Result<Self> {
         let contents: String = Self::extract_to_string(path)?;
-        let res: Self = toml::from_str(&contents).map_err(|e| RustDFSError::TomlError(e))?;
+        let res: Self = toml::from_str(&contents).map_err(RustDFSError::TomlError)?;
 
-        return Ok(res);
+        Ok(res)
     }
 
     // Reads the entire content of the file at the specified path into a string.
@@ -118,11 +118,11 @@ impl RustDFSConfig {
         let mut contents: String = String::new();
 
         File::open(path)
-            .map_err(|e| RustDFSError::IoError(e))?
+            .map_err(RustDFSError::IoError)?
             .read_to_string(&mut contents)
-            .map_err(|e| RustDFSError::IoError(e))?;
+            .map_err(RustDFSError::IoError)?;
 
-        return Ok(contents);
+        Ok(contents)
     }
 }
 

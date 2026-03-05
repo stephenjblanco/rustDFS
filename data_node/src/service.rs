@@ -74,11 +74,11 @@ impl DataNode for DataNodeService {
             .await
             .into_iter()
             .enumerate()
-            .filter(|(_, r)| r.is_err() || r.as_ref().unwrap().success == false)
+            .filter(|(_, r)| r.is_err() || !r.as_ref().unwrap().success)
             .map(|(i, _)| ids[i].clone())
             .collect::<Vec<_>>();
 
-        if failed.len() > 0 {
+        if !failed.is_empty() {
             let err = status_err_forwarding(&failed);
             self.log_mgr.write_status(&err);
             return Err(err);
@@ -116,7 +116,7 @@ impl DataNode for DataNodeService {
             )
         });
 
-        Ok(Response::new(DataReadResponse { data: data }))
+        Ok(Response::new(DataReadResponse { data }))
     }
 }
 
@@ -190,7 +190,7 @@ impl DataNodeService {
             format!(
                 "Starting DataNodeServer with ID {} at {} on port {}",
                 self.id,
-                addr.ip().to_string(),
+                addr.ip(),
                 addr.port()
             )
         });
@@ -240,7 +240,7 @@ fn err_misconfigured_svc() -> RustDFSError {
     RustDFSError::CustomError("Misconfigured Data Node service".to_string())
 }
 
-fn status_err_forwarding(nodes: &Vec<String>) -> Status {
+fn status_err_forwarding(nodes: &[String]) -> Status {
     let ids_str = nodes.join(",");
     let log = format!("Error forwarding to data nodes: {}", ids_str);
     Status::internal(log)

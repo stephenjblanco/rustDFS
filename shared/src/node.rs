@@ -18,7 +18,7 @@ impl From<&GenericNode> for Result<SocketAddr> {
         let addr_str = format!("{}:{}", node.host, node.port);
         addr_str
             .to_socket_addrs()
-            .map_err(|e| RustDFSError::IoError(e))?
+            .map_err(RustDFSError::IoError)?
             .next()
             .ok_or_else(|| err_invalid_addr(&node.host, node.port))
     }

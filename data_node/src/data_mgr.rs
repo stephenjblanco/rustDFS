@@ -43,7 +43,7 @@ impl DataDirManager {
 
         Ok(DataDirManager {
             path: path_str.to_string(),
-            log_mgr: log_mgr,
+            log_mgr,
         })
     }
 

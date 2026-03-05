@@ -25,6 +25,12 @@ pub struct RustDFSArgs {
     pub log_level: LogLevel,
 }
 
+impl Default for RustDFSArgs {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RustDFSArgs {
     pub fn new() -> Self {
         Self::parse()
