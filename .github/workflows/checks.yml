@@ -15,4 +15,4 @@ jobs:
       - name: rustfmt
         uses: ./.github/workflows/build-action
         with:
-          command: cargo fmt --all -- --check
+          command: rustup component add rustfmt && cargo fmt --all -- --check
