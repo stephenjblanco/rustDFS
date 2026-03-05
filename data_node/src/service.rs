@@ -1,23 +1,30 @@
 use std::collections::HashMap;
+use std::net::SocketAddr;
 use futures::future::join_all;
 use tonic::{Request, Response, Status};
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
 use tonic_health::server as health_server;
 
-use rustdfs_shared::base::error::RustDFSError;
-use rustdfs_shared::base::result::{Result, ServiceResult};
-use rustdfs_shared::base::config::RustDFSConfig;
-use rustdfs_shared::base::logging::{LogManager, LogLevel};
-use rustdfs_shared::base::args::RustDFSArgs;
-use rustdfs_shared::base::node::{GenericNode, Node};
-use rustdfs_shared::data_node::conn::DataNodeConn;
-use rustdfs_shared::data_node::mgr::DataNodeManager;
-use rustdfs_shared::data_node::proto::data_node_server::{DataNode, DataNodeServer};
-use rustdfs_shared::data_node::proto::{DataWriteRequest, DataWriteResponse, DataReadRequest, DataReadResponse};
-use rustdfs_shared::data_node::proto::DATA_FILE_DESCRIPTOR_SET;
+use rustdfs_shared::error::RustDFSError;
+use rustdfs_shared::result::{Result, ServiceResult};
+use rustdfs_shared::config::RustDFSConfig;
+use rustdfs_shared::logging::{LogManager, LogLevel};
+use rustdfs_shared::args::RustDFSArgs;
+use rustdfs_shared::node::GenericNode;
+use rustdfs_shared::data_conn::{DataNodeConn, DataNodeManager};
+use rustdfs_shared::proto::data_node_server::{DataNode, DataNodeServer};
+use rustdfs_shared::proto::{DataWriteRequest, DataWriteResponse, DataReadRequest, DataReadResponse};
+use rustdfs_shared::proto::DATA_FILE_DESCRIPTOR_SET;
+
 use crate::data_mgr::DataDirManager;
 
+/**
+ * Data Node service implementation for RustDFS.
+ * 
+ * Handles read and write requests for data blocks,
+ * and manages replication to other data nodes.
+ */
 #[derive(Debug)]
 pub struct DataNodeService {
     id: String,
@@ -30,6 +37,13 @@ pub struct DataNodeService {
 #[tonic::async_trait]
 impl DataNode for DataNodeService {
 
+    /**
+     * Writes a block of data to the data node.
+     * Also replicates the block to other data nodes as specified.
+     * 
+     *  @param request - DataWriteRequest containing block ID, data, and replica node IDs.
+     *  @return Result<Response<DataWriteResponse>> - Response indicating success or failure.
+     */
     async fn write(
         &self,
         request: Request<DataWriteRequest>,
@@ -97,6 +111,12 @@ impl DataNode for DataNodeService {
         )
     }
 
+    /**
+     * Reads a block of data from the data node.
+     * 
+     *  @param request - DataReadRequest containing block ID.
+     *  @return Result<Response<DataReadResponse>> - Response containing data block or error.
+     */
     async fn read(
         &self,
         request: Request<DataReadRequest>,
@@ -126,6 +146,15 @@ impl DataNode for DataNodeService {
 
 impl DataNodeService {
 
+    /**
+     * Creates a new DataNodeService instance.
+     * Maps ID from args to config and initializes components, including connections
+     * to other data nodes.
+     * 
+     *  @param args - Command line arguments for the data node.
+     *  @param config - Configuration for the RustDFS cluster.
+     *  @return Result<DataNodeService> - Initialized DataNodeService instance or error.
+     */
     pub fn new(
         args: RustDFSArgs,
         config: RustDFSConfig,
@@ -182,11 +211,17 @@ impl DataNodeService {
         )
     }
 
+    /**
+     * Starts the DataNodeService server to handle incoming requests.
+     * Sets up health reporting and service reflection for gRPC.
+     * 
+     *  @return Result<()> - Result indicating success or failure of the server.
+     */
     pub async fn serve(
         self,
     ) -> Result<()> {
         let (health_rep, health_svc) = health_server::health_reporter();
-        let addr: std::net::SocketAddr = self.self_node.to_socket_addr()?;
+        let addr = Into::<Result<SocketAddr>>::into(&self.self_node)?;
         let logger = self.log_mgr.clone();
 
         // should remove this or make it optional via config
@@ -230,6 +265,8 @@ impl DataNodeService {
     }
 }
 
+// Format bytes into human-readable string
+// e.g., 1024 -> "1.00 KB", 1048576 -> "1.00 MB"
 fn format_bytes(bytes: usize) -> String {
     const KB: usize = 1024;
     const MB: usize = 1024 * KB;
@@ -242,6 +279,8 @@ fn format_bytes(bytes: usize) -> String {
         format!("{} B", bytes)
     }
 }
+
+// Helper functions for error statuses
 
 fn err_misconfigured_svc() -> RustDFSError {
     RustDFSError::CustomError("Misconfigured Data Node service".to_string())

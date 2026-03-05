@@ -12,6 +12,9 @@ use crate::proto::{NameReadRequest};
 
 const BLOCK_SIZE: usize = 1024 * 1024 * 2; // 2 MB
 
+/**
+ * Runs supported operations (read / write) on RustDFS name node.
+ */
 pub trait RustDFSClient {
     async fn client_write(&mut self, args: RustDFSArgs);
     async fn client_read(&mut self, args: RustDFSArgs);
@@ -19,6 +22,15 @@ pub trait RustDFSClient {
 
 impl RustDFSClient for NameNodeClient<Channel> {
 
+    /**
+     * Writes a file to the RustDFS cluster.
+     * Breaks file into 2 MB blocks and streams to name node.
+     * 
+     *  @param args - Program args including source / destination file path.
+     * 
+     * Source file from args corresponsds to local file path.
+     * Destination file from args corresponds to file name in RustDFS cluster.
+     */
     async fn client_write(
         &mut self, 
         args: RustDFSArgs
@@ -51,6 +63,16 @@ impl RustDFSClient for NameNodeClient<Channel> {
             .unwrap();
     }
 
+    /**
+     * Reads a file from the RustDFS cluster.
+     * Streams file blocks from name node and writes to local file.
+     * Creates parent directories as needed.
+     * 
+     *  @param args - Program args including source / destination file path.
+     * 
+     * Source file from args corresponsds to file name in RustDFS cluster.
+     * Destination file from args corresponds to local file path.
+     */
     async fn client_read(
         &mut self, 
         args: RustDFSArgs

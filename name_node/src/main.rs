@@ -2,8 +2,8 @@ mod proto;
 mod service;
 mod name_mgr;
 
-use rustdfs_shared::base::args::RustDFSArgs;
-use rustdfs_shared::base::config::RustDFSConfig;
+use rustdfs_shared::args::RustDFSArgs;
+use rustdfs_shared::config::RustDFSConfig;
 
 use service::NameNodeService;
 

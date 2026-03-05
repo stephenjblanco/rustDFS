@@ -1,11 +1,17 @@
 use clap::{Parser, ValueEnum};
 
+/**
+ * Supported operations for RustDFS client.
+ */
 #[derive(Debug, Clone, ValueEnum)]
 pub enum Operation {
     Write,
     Read,
 }
 
+/**
+ * Command line arguments for RustDFS client.
+ */
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct RustDFSArgs {

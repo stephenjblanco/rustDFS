@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::Arc;
 use rand::seq::SliceRandom;
@@ -6,7 +7,6 @@ use futures::Future;
 use futures::pin_mut;
 use uuid::Uuid;
 use mpsc::Sender;
-
 use tokio::sync::mpsc;
 use tokio_stream::{Stream, StreamExt};
 use tokio_stream::wrappers::ReceiverStream;
@@ -15,15 +15,14 @@ use tonic::transport::Server;
 use tonic_reflection::server::Builder;
 use tonic_health::server as health_server;
 
-use rustdfs_shared::base::error::RustDFSError;
-use rustdfs_shared::base::logging::{LogManager, LogLevel};
-use rustdfs_shared::base::result::{Result, ServiceResult};
-use rustdfs_shared::base::config::RustDFSConfig;
-use rustdfs_shared::base::args::RustDFSArgs;
-use rustdfs_shared::base::node::{GenericNode, Node};
-use rustdfs_shared::data_node::proto::{DataReadRequest, DataReadResponse, DataWriteRequest, DataWriteResponse};
-use rustdfs_shared::data_node::conn::DataNodeConn;
-use rustdfs_shared::data_node::mgr::DataNodeManager;
+use rustdfs_shared::error::RustDFSError;
+use rustdfs_shared::logging::{LogManager, LogLevel};
+use rustdfs_shared::result::{Result, ServiceResult};
+use rustdfs_shared::config::RustDFSConfig;
+use rustdfs_shared::args::RustDFSArgs;
+use rustdfs_shared::node::GenericNode;
+use rustdfs_shared::proto::{DataReadRequest, DataReadResponse, DataWriteRequest, DataWriteResponse};
+use rustdfs_shared::data_conn::{DataNodeConn, DataNodeManager};
 
 use crate::name_mgr::BlockDescriptor;
 use crate::name_mgr::NameManager;
@@ -37,6 +36,12 @@ type ReadStream = Pin<Box<dyn Stream<Item = ServiceResult<NameReadResponse>> + S
 const WRITE_BUF_SIZE: usize = 8;
 const READ_BUF_SIZE: usize = 8;
 
+/**
+ * Name Node service implementation for RustDFS.
+ * 
+ * Handles file metadata management, including mapping files to 
+ * data blocks and their locations.
+ */
 #[derive(Debug)]
 pub struct NameNodeService {
     id: String,
@@ -52,6 +57,14 @@ impl NameNode for NameNodeService {
 
     type ReadStream = ReadStream;
 
+    /**
+     * Writes a file to the RustDFS cluster.
+     * Breaks file into blocks, assigns to data nodes, and manages replication.
+     * Concurrently writes 8 blocks at a time before polling for more requests.
+     * 
+     *  @param request - Streaming<NameWriteRequest> containing file name and data blocks.
+     *  @return Result<Response<NameWriteResponse>> - Response indicating success or failure.
+     */
     async fn write(
         &self,
         request: Request<Streaming<NameWriteRequest>>,
@@ -129,6 +142,14 @@ impl NameNode for NameNodeService {
         )
     }
 
+    /**
+     * Reads a file from the RustDFS cluster.
+     * Retrieves file metadata and streams data blocks from data nodes. Concurrently reads
+     * 8 blocks and flushes to client. This is to manage memory usage on the name node.
+     * 
+     *  @param request - NameReadRequest containing file name.
+     *  @return Result<Response<ReadStream>> - Response streaming file data or error.
+     */
     async fn read(
         &self,
         request: Request<NameReadRequest>,
@@ -151,9 +172,7 @@ impl NameNode for NameNodeService {
                 let node_mgr = Arc::clone(&node_mgr);
                 let logger_clone = logger.clone();
 
-                tasks.push((
-                    req.file_name.clone(),
-                    block.id.clone(),
+                tasks.push(
                     async move {
                         let mut nodes = block.node_ids.clone();
                         nodes.shuffle(&mut rand::rng());
@@ -189,10 +208,15 @@ impl NameNode for NameNodeService {
 
                         Err(status_err_reading(block.id))
                     }
-                ));
+                );
 
                 if tasks.len() >= READ_BUF_SIZE {
-                    match drain_reads(&logger, &mut tasks, &mut tx).await {
+                    match drain_reads(
+                        &logger, 
+                        &req.file_name, 
+                        &mut tasks, 
+                        &mut tx
+                    ).await {
                         Ok(_) => {}
                         Err(_) => return,
                     }
@@ -200,7 +224,12 @@ impl NameNode for NameNodeService {
             }
 
             if !tasks.is_empty() {
-                match drain_reads(&logger, &mut tasks, &mut tx).await {
+                match drain_reads(
+                    &logger, 
+                    &req.file_name, 
+                    &mut tasks, 
+                    &mut tx
+                ).await {
                     Ok(_) => {}
                     Err(_) => return,
                 }
@@ -225,6 +254,13 @@ impl NameNode for NameNodeService {
 
 impl NameNodeService {
 
+    /**
+     * Creates a new instance of NameNodeService.
+     * 
+     *  @param args - Command line arguments for the data node.
+     *  @param config - Configuration for the RustDFS cluster.
+     *  @return Result<NameNodeService> - Initialized NameNodeService instance or error.
+     */
     pub fn new(
         args: RustDFSArgs,
         config: RustDFSConfig,
@@ -278,11 +314,17 @@ impl NameNodeService {
         )
     }
 
+    /**
+     * Starts the NameNodeService server to handle incoming requests.
+     * Sets up health reporting and service reflection for gRPC.
+     * 
+     *  @return Result<()> - Result indicating success or failure of the server.
+     */
     pub async fn serve(
         self,
     ) -> Result<()> {
         let (health_rep, health_svc) = health_server::health_reporter();
-        let addr = self.self_node.to_socket_addr()?;
+        let addr = Into::<Result<SocketAddr>>::into(&self.self_node)?;
         let logger = self.log_mgr.clone();
 
         // should remove this or make it optional via config
@@ -349,6 +391,14 @@ impl NameNodeService {
     }
 }
 
+/**
+ * Drains a buffer of write futures, awaiting their completion.
+ * Logs any errors encountered during writes.
+ * 
+ *  @param logger - LogManager for logging errors.
+ *  @param buf - Mutable reference to a vector of (block ID, node ID, write future) tuples.
+ *  @return ServiceResult<()> - Result indicating success or failure of writes.
+ */
 async fn drain_writes<T>(
     logger: &LogManager,
     buf: &mut Vec<(String, String, T)>,
@@ -382,21 +432,31 @@ async fn drain_writes<T>(
     Ok(())
 }
 
+/**
+ * Drains a buffer of read futures, awaiting their completion.
+ * Sends results or errors back through the provided channel.
+ * 
+ *  @param logger - LogManager for logging errors.
+ *  @param buf - Mutable reference to a vector of (file name, block ID, read future) tuples.
+ *  @param tx - Mutable reference to a Sender for sending read results.
+ *  @return ServiceResult<()> - Result indicating success or failure of reads.
+ */
 async fn drain_reads<T>(
     logger: &LogManager,
-    buf: &mut Vec<(String, String, T)>,
+    file: &str,
+    buf: &mut Vec<T>,
     tx: &mut Sender<ServiceResult<NameReadResponse>>,
 ) -> ServiceResult<()>
     where T: Future<Output = ServiceResult<DataReadResponse>>
 {
-    for (file, block, fut) in buf.drain(..) {
+    for fut in buf.drain(..) {
         pin_mut!(fut);
 
         match fut.await {
             Ok(read) => {
                 let res = tx.send(Ok(
                     NameReadResponse {
-                        file_name: file.clone(),
+                        file_name: file.to_string(),
                         data: read.data,
                     }
                 )).await;
@@ -426,6 +486,8 @@ async fn drain_reads<T>(
 
     Ok(())
 }
+
+//
 
 fn err_misconfigured_svc() -> RustDFSError {
     RustDFSError::CustomError("Misconfigured Name Node service".to_string())

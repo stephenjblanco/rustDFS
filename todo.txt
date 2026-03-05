@@ -1,5 +1,8 @@
- - persist name node data
+ - dynamic data nodes -> register with name node like real HDFS
+ - support health check between nodes
+ - support multiple name nodes -> notify other name nodes on change
  - implement inodes / directory structure
- - notify other name nodes
+ - persist name node data
+ - support rebalancing data
  - daemonize client
  

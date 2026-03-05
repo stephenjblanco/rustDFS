@@ -2,11 +2,15 @@ use std::fs::{self, OpenOptions};
 use std::io::{Write, Error as IoError};
 use std::path::Path;
 
-use rustdfs_shared::base::error::RustDFSError;
-use rustdfs_shared::base::result::{Result, ServiceResult};
-use rustdfs_shared::base::logging::LogManager;
+use rustdfs_shared::error::RustDFSError;
+use rustdfs_shared::result::{Result, ServiceResult};
+use rustdfs_shared::logging::LogManager;
 use tonic::Status;
 
+/**
+ * Manages data directory operations for the data node.
+ * Responsible for reading and writing data blocks to the local filesystem.
+ */
 #[derive(Debug)]
 pub struct DataDirManager {
     path: String,
@@ -15,6 +19,14 @@ pub struct DataDirManager {
 
 impl DataDirManager {
 
+    /**
+     * Creates a new DataDirManager instance.
+     * Ensures the data directory exists or creates it.
+     * 
+     *  @param path_str - Path to the data directory.
+     *  @param log_mgr - LogManager for logging operations.
+     *  @return ServiceResult<DataDirManager> - Initialized DataDirManager instance or error.
+     */
     pub fn new(
         path_str: &str,
         log_mgr: LogManager,
@@ -42,6 +54,13 @@ impl DataDirManager {
         )
     }
 
+    /**
+     * Writes a block of data to the data node. 
+     * 
+     *  @param block_id - Identifier for the data block.
+     *  @param data - Byte slice containing the data to write.
+     *  @return ServiceResult<()> - Result indicating success or failure.
+     */
     pub fn write_block(
         &self, 
         block_id: &str, 
@@ -70,6 +89,12 @@ impl DataDirManager {
         Ok(())
     }
 
+    /**
+     * Reads a block of data from the data node.
+     * 
+     *  @param block_id - Identifier for the data block.
+     *  @return ServiceResult<Vec<u8>> - Byte vector containing data or error.
+     */
     pub fn read_block(
         &self, 
         block_id: &str
@@ -84,6 +109,8 @@ impl DataDirManager {
             })   
     }
 }
+
+// Helper functions for error statuses
 
 fn err_invalid_dir(
     path: &str,
