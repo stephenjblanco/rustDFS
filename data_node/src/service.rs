@@ -53,7 +53,8 @@ impl DataNode for DataNodeService {
         let mut repls = Vec::new();
         let mut ids = Vec::new();
 
-        self.data_mgr.write_block(&request_ref.block_id, &request_ref.data)?;
+        self.data_mgr
+            .write_block(&request_ref.block_id, &request_ref.data)?;
 
         for id in request_ref.replica_node_ids.iter() {
             if id == &self.id {
@@ -91,9 +92,7 @@ impl DataNode for DataNodeService {
             )
         });
 
-        Ok(Response::new(DataWriteResponse {
-            success: true,
-        }))
+        Ok(Response::new(DataWriteResponse { success: true }))
     }
 
     /**
@@ -110,12 +109,14 @@ impl DataNode for DataNodeService {
         let data: Vec<u8> = self.data_mgr.read_block(&request_ref.block_id)?;
 
         self.log_mgr.write(LogLevel::Info, || {
-            format!("Read block {} with {}", request_ref.block_id, format_bytes(data.len()))
+            format!(
+                "Read block {} with {}",
+                request_ref.block_id,
+                format_bytes(data.len())
+            )
         });
 
-        Ok(Response::new(DataReadResponse {
-            data,
-        }))
+        Ok(Response::new(DataReadResponse { data }))
     }
 }
 
@@ -146,8 +147,10 @@ impl DataNodeService {
                 continue;
             }
 
-            data_nodes
-                .insert(k.clone(), DataNodeConn::new(k.clone(), dn_config.host, dn_config.port));
+            data_nodes.insert(
+                k.clone(),
+                DataNodeConn::new(k.clone(), dn_config.host, dn_config.port),
+            );
         }
 
         if node.is_none() || data_dir.is_none() || log_file.is_none() {
@@ -192,7 +195,9 @@ impl DataNodeService {
             )
         });
 
-        health_rep.set_serving::<DataNodeServer<DataNodeService>>().await;
+        health_rep
+            .set_serving::<DataNodeServer<DataNodeService>>()
+            .await;
 
         let res = Server::builder()
             .add_service(health_svc)
@@ -206,7 +211,9 @@ impl DataNodeService {
                 err
             });
 
-        health_rep.set_not_serving::<DataNodeServer<DataNodeService>>().await;
+        health_rep
+            .set_not_serving::<DataNodeServer<DataNodeService>>()
+            .await;
 
         res
     }

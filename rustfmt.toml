@@ -1,4 +1,0 @@
-use_small_heuristics = "Off"
-fn_params_layout = "Tall"
-use_field_init_shorthand = false
-max_width = 100

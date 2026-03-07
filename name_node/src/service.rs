@@ -118,11 +118,11 @@ impl NameNode for NameNodeService {
 
         self.name_mgr.add_file(name.clone().unwrap(), blocks).await;
 
-        self.log_mgr.write(LogLevel::Info, || format!("Finished writing file {}", name.unwrap()));
+        self.log_mgr.write(LogLevel::Info, || {
+            format!("Finished writing file {}", name.unwrap())
+        });
 
-        Ok(Response::new(NameWriteResponse {
-            success: true,
-        }))
+        Ok(Response::new(NameWriteResponse { success: true }))
     }
 
     /**
@@ -193,7 +193,9 @@ impl NameNode for NameNodeService {
                 }
             }
 
-            logger.write(LogLevel::Info, || format!("Finished reading file {}", req.file_name));
+            logger.write(LogLevel::Info, || {
+                format!("Finished reading file {}", req.file_name)
+            });
         });
 
         Ok(Response::new(Box::pin(out) as Self::ReadStream))
@@ -228,7 +230,10 @@ impl NameNodeService {
         }
 
         for (k, dn_config) in config.data_nodes {
-            data_nodes.insert(k.clone(), DataNodeConn::new(k, dn_config.host, dn_config.port));
+            data_nodes.insert(
+                k.clone(),
+                DataNodeConn::new(k, dn_config.host, dn_config.port),
+            );
         }
 
         let logger = LogManager::new(log_file.clone().unwrap(), args.log_level, args.silent)?;
@@ -270,7 +275,9 @@ impl NameNodeService {
             )
         });
 
-        health_rep.set_serving::<NameNodeServer<NameNodeService>>().await;
+        health_rep
+            .set_serving::<NameNodeServer<NameNodeService>>()
+            .await;
 
         let res = Server::builder()
             .add_service(health_svc)
@@ -284,7 +291,9 @@ impl NameNodeService {
                 err
             });
 
-        health_rep.set_not_serving::<NameNodeServer<NameNodeService>>().await;
+        health_rep
+            .set_not_serving::<NameNodeServer<NameNodeService>>()
+            .await;
 
         res
     }
