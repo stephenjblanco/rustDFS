@@ -24,9 +24,7 @@ impl NameManager {
      * Creates a new NameManager instance.
      */
     pub fn new() -> Self {
-        NameManager {
-            files: RwLock::new(HashMap::new()),
-        }
+        NameManager { files: RwLock::new(HashMap::new()) }
     }
 
     /**

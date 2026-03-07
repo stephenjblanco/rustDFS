@@ -41,10 +41,7 @@ impl DataDirManager {
             })?;
         }
 
-        Ok(DataDirManager {
-            path: path_str.to_string(),
-            log_mgr,
-        })
+        Ok(DataDirManager { path: path_str.to_string(), log_mgr })
     }
 
     /**
@@ -57,16 +54,14 @@ impl DataDirManager {
     pub fn write_block(&self, block_id: &str, data: &[u8]) -> ServiceResult<()> {
         let block_path = format!("{}/{}", self.path, block_id);
 
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(&block_path)
-            .map_err(|e| {
-                let err = status_err_writing(block_id, e);
-                self.log_mgr.write_status(&err);
-                err
-            })?;
+        let mut file =
+            OpenOptions::new().write(true).create(true).truncate(true).open(&block_path).map_err(
+                |e| {
+                    let err = status_err_writing(block_id, e);
+                    self.log_mgr.write_status(&err);
+                    err
+                },
+            )?;
 
         file.write_all(data).map_err(|e| {
             let err = status_err_writing(block_id, e);

@@ -10,9 +10,5 @@ async fn main() {
     let config = RustDFSConfig::new().unwrap();
     let args = RustDFSArgs::new();
 
-    DataNodeService::new(args, config)
-        .unwrap()
-        .serve()
-        .await
-        .unwrap();
+    DataNodeService::new(args, config).unwrap().serve().await.unwrap();
 }

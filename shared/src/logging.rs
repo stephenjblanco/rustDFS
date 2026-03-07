@@ -55,11 +55,7 @@ impl LogManager {
             fs::create_dir_all(parent).map_err(RustDFSError::IoError)?;
         }
 
-        Ok(LogManager {
-            file,
-            level,
-            silent,
-        })
+        Ok(LogManager { file, level, silent })
     }
 
     /**

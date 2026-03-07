@@ -41,12 +41,7 @@ impl DataNodeConn {
      *  @return DataNodeConn - Initialized data node connection.
      */
     pub fn new(id: String, host: String, port: u16) -> Self {
-        DataNodeConn {
-            id,
-            host,
-            port,
-            client_ref: Mutex::new(None),
-        }
+        DataNodeConn { id, host, port, client_ref: Mutex::new(None) }
     }
 
     /**
@@ -130,10 +125,7 @@ impl From<&DataNodeConn> for ServiceResult<Endpoint> {
 
 impl From<&DataNodeConn> for Result<SocketAddr> {
     fn from(node: &DataNodeConn) -> Self {
-        Into::<Result<SocketAddr>>::into(&GenericNode {
-            host: node.host.clone(),
-            port: node.port,
-        })
+        Into::<Result<SocketAddr>>::into(&GenericNode { host: node.host.clone(), port: node.port })
     }
 }
 
@@ -159,10 +151,7 @@ impl DataNodeManager {
      *  @return DataNodeManager - Initialized data node manager.
      */
     pub fn new(connections: HashMap<String, DataNodeConn>, log_mgr: LogManager) -> Self {
-        DataNodeManager {
-            connections,
-            log_mgr,
-        }
+        DataNodeManager { connections, log_mgr }
     }
 
     /**
