@@ -42,7 +42,10 @@ impl RustDFSClient for NameNodeClient<Channel> {
                 }
 
                 Some((
-                    NameWriteRequest { file_name: name.clone(), data: buf[..n].to_vec() },
+                    NameWriteRequest {
+                        file_name: name.clone(),
+                        data: buf[..n].to_vec(),
+                    },
                     (name, file),
                 ))
             },
@@ -62,8 +65,13 @@ impl RustDFSClient for NameNodeClient<Channel> {
      * Destination file from args corresponds to local file path.
      */
     async fn client_read(&mut self, args: RustDFSArgs) {
-        let mut stream =
-            self.read(NameReadRequest { file_name: args.source }).await.unwrap().into_inner();
+        let mut stream = self
+            .read(NameReadRequest {
+                file_name: args.source,
+            })
+            .await
+            .unwrap()
+            .into_inner();
 
         if let Some(parent) = Path::new(&args.dest).parent() {
             fs::create_dir_all(parent).await.unwrap();

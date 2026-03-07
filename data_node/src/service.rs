@@ -91,7 +91,9 @@ impl DataNode for DataNodeService {
             )
         });
 
-        Ok(Response::new(DataWriteResponse { success: true }))
+        Ok(Response::new(DataWriteResponse {
+            success: true,
+        }))
     }
 
     /**
@@ -111,7 +113,9 @@ impl DataNode for DataNodeService {
             format!("Read block {} with {}", request_ref.block_id, format_bytes(data.len()))
         });
 
-        Ok(Response::new(DataReadResponse { data }))
+        Ok(Response::new(DataReadResponse {
+            data,
+        }))
     }
 }
 
@@ -133,7 +137,10 @@ impl DataNodeService {
 
         for (k, dn_config) in config.data_nodes {
             if args.id == k {
-                node = Some(GenericNode { host: dn_config.host, port: dn_config.port });
+                node = Some(GenericNode {
+                    host: dn_config.host,
+                    port: dn_config.port,
+                });
                 data_dir = Some(dn_config.data_dir);
                 log_file = Some(dn_config.log_file);
                 continue;

@@ -87,8 +87,10 @@ impl NameNode for NameNodeService {
                     let prim = node_ids[0].clone();
                     let repls = node_ids[1..].to_vec();
 
-                    blocks
-                        .push(BlockDescriptor { id: block_id.clone(), node_ids: node_ids.clone() });
+                    blocks.push(BlockDescriptor {
+                        id: block_id.clone(),
+                        node_ids: node_ids.clone(),
+                    });
 
                     writes.push((
                         prim.clone(),
@@ -118,7 +120,9 @@ impl NameNode for NameNodeService {
 
         self.log_mgr.write(LogLevel::Info, || format!("Finished writing file {}", name.unwrap()));
 
-        Ok(Response::new(NameWriteResponse { success: true }))
+        Ok(Response::new(NameWriteResponse {
+            success: true,
+        }))
     }
 
     /**
@@ -152,7 +156,9 @@ impl NameNode for NameNodeService {
                     for id in block.node_ids.iter() {
                         let res = node_mgr
                             .get_conn(id)?
-                            .read(DataReadRequest { block_id: block.id.clone() })
+                            .read(DataReadRequest {
+                                block_id: block.id.clone(),
+                            })
                             .await;
 
                         match res {
@@ -210,7 +216,10 @@ impl NameNodeService {
         for (k, nn_config) in config.name_nodes {
             if k == args.id {
                 log_file = Some(nn_config.log_file);
-                node = Some(GenericNode { host: nn_config.host, port: nn_config.port });
+                node = Some(GenericNode {
+                    host: nn_config.host,
+                    port: nn_config.port,
+                });
             }
         }
 
@@ -359,7 +368,10 @@ where
         match fut.await {
             Ok(read) => {
                 let res = tx
-                    .send(Ok(NameReadResponse { file_name: file.to_string(), data: read.data }))
+                    .send(Ok(NameReadResponse {
+                        file_name: file.to_string(),
+                        data: read.data,
+                    }))
                     .await;
 
                 if res.is_err() {
