@@ -1,7 +1,10 @@
 use chrono::Local;
 use clap::ValueEnum;
+use mpsc::Sender;
 use std::fs::{self, write};
 use std::path::Path;
+use std::sync::mpsc;
+use std::thread;
 use tonic::Status;
 
 use super::error::RustDFSError;
@@ -12,13 +15,13 @@ use super::result::Result;
  * Responsible for writing log messages to a specified log file with different log levels.
  * Also supports console output.
  *
- *  @field file - Path to the log file.
+ *  @field channel - Channel for sending log messages to log thread.
  *  @field level - Minimum log level to record.
  *  @field silent - If true, suppresses console output.
  */
 #[derive(Debug, Clone)]
 pub struct LogManager {
-    file: String,
+    channel: Sender<String>,
     level: LogLevel,
     silent: bool,
 }
@@ -39,31 +42,42 @@ pub enum LogLevel {
 
 impl LogManager {
     /**
-     * Creates a new LogManager instance.
-     * Ensures the log file's parent directory exists.
+     * Creates a new LogManager instance. Ensures the log file's parent
+     * directory exists. Spawns dedicated thread to handle logfile writing.
+     *  
+     * It's important that only one instance is created to avoid write
+     * conflicts / spawning unnecessary threads. Instead rely on
+     * cloning a shared instance.
      *
-     *  @param file - Path to the log file.
+     *  @param fp - Path to the log file.
      *  @param level - Minimum log level to record.
      *  @param silent - If true, suppresses console output.
      *  @return Result<LogManager> - Initialized LogManager instance or error.
      */
-    pub fn new(file: String, level: LogLevel, silent: bool) -> Result<Self> {
-        let path = Path::new(&file);
+    pub fn new(fp: String, level: LogLevel, silent: bool) -> Result<Self> {
+        let (tx, rx) = mpsc::channel::<String>();
+        let path = Path::new(&fp);
         let parent = path.parent().unwrap_or(Path::new(""));
 
         if !parent.as_os_str().is_empty() && !parent.is_dir() {
             fs::create_dir_all(parent).map_err(RustDFSError::IoError)?;
         }
 
+        thread::spawn(move || {
+            while let Ok(msg) = rx.recv() {
+                let _ = write(&fp, msg);
+            }
+        });
+
         Ok(LogManager {
-            file,
+            channel: tx,
             level,
             silent,
         })
     }
 
     /**
-     * Writes a log message to the log file and optionally to the console.
+     * Writes log message to logfile and optionally to console.
      *
      *  @param level - Log level of the message.
      *  @param provider - Closure that provides the log message string.
@@ -75,8 +89,9 @@ impl LogManager {
 
         let msg = provider();
         let ts = Local::now().format("%Y-%m-%d %H:%M:%S");
+        let fmt = format!("[{}] [{:?}] {}\n", ts, level, msg);
 
-        let _ = write(&self.file, format!("[{}] [{:?}] {}", ts, level, msg));
+        self.channel.send(fmt).ok();
 
         if !self.silent {
             match level {

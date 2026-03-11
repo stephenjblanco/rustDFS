@@ -49,24 +49,19 @@ The `small.txt` file demonstrates a single-block transfer, and `large.txt` demon
 
 ## Configuration
 
-The cluster configuration lives in `rdfsconf.toml`:
+The cluster configuration lives in `rdfsconf.toml`. All data nodes share the same `[data-node]` config block; each resolves its own hostname automatically and receives its port via the `--port` CLI flag:
 
 ```toml
 replica-count = 2
 
-[name-node.nn0]
+[name-node]
 host = "namenode"
 port = 5000
 log-file = "/var/log/rustdfs/namenode.log"
-name-file = "/var/lib/rustdfs/names"
 
-[data-node.dn0]
-host = "datanode0"
-port = 5001
+[data-node]
 data-dir = "/var/lib/rustdfs/data"
 log-file = "/var/log/rustdfs/datanode.log"
-
-# ... dn1, dn2 follow the same pattern
 ```
 
 To modify the cluster (e.g., change the replication factor or add / remove data nodes), edit `rdfsconf.toml` and update `docker-compose.yml` accordingly.

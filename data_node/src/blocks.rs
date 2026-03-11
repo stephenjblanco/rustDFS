@@ -12,21 +12,21 @@ use tonic::Status;
  * Responsible for reading and writing data blocks to the local filesystem.
  */
 #[derive(Debug)]
-pub struct DataDirManager {
+pub struct BlockManager {
     path: String,
     log_mgr: LogManager,
 }
 
-impl DataDirManager {
+impl BlockManager {
     /**
-     * Creates a new DataDirManager instance.
+     * Creates a new BlockManager instance.
      * Ensures the data directory exists or creates it.
      *
      *  @param path_str - Path to the data directory.
      *  @param log_mgr - LogManager for logging operations.
-     *  @return ServiceResult<DataDirManager> - Initialized DataDirManager instance or error.
+     *  @return ServiceResult<BlockManager> - Initialized BlockManager instance or error.
      */
-    pub fn new(path_str: &str, log_mgr: LogManager) -> Result<Self> {
+    pub fn new(path_str: &str, log_mgr: &LogManager) -> Result<Self> {
         let path = Path::new(path_str);
 
         if path.exists() && !path.is_dir() {
@@ -41,9 +41,9 @@ impl DataDirManager {
             })?;
         }
 
-        Ok(DataDirManager {
+        Ok(BlockManager {
             path: path_str.to_string(),
-            log_mgr,
+            log_mgr: log_mgr.clone(),
         })
     }
 

@@ -1,10 +1,9 @@
-mod name_mgr;
-mod proto;
+mod args;
+mod files;
 mod service;
 
-use rustdfs_shared::args::RustDFSArgs;
+use args::RustDFSArgs;
 use rustdfs_shared::config::RustDFSConfig;
-
 use service::NameNodeService;
 
 #[tokio::main]

@@ -62,18 +62,14 @@ All nodes read a shared TOML configuration file (default: `/etc/rustdfs/rdfsconf
 ```toml
 replica-count = 2
 
-[name-node.nn0]
-host = "nn0"
+[name-node]
+host = "namenode"
 port = 5000
 log-file = "/var/log/rustdfs/namenode.log"
 
-[data-node.dn0]
-host = "dn0"
-port = 5001
+[data-node]
 data-dir = "/var/lib/rustdfs/data"
 log-file = "/var/log/rustdfs/datanode.log"
-
-[ ... ]
 ```
 
 ## Usage
@@ -81,14 +77,16 @@ log-file = "/var/log/rustdfs/datanode.log"
 ### Name Node
 
 ```bash
-rustDFS-namenode --id nn0 [--silent] [--log-level <error|info|debug>]
+rustDFS-namenode [--silent] [--log-level <error|info|debug>]
 ```
 
 ### Data Node
 
 ```bash
-rustDFS-datanode --id dn0 [--silent] [--log-level <error|info|debug>]
+rustDFS-datanode --port <PORT> [--silent] [--log-level <error|info|debug>]
 ```
+
+The data node resolves its own hostname automatically and registers itself with the name node on startup.
 
 ### Client
 
@@ -99,6 +97,16 @@ rustDFS-client write <namenode_host:port> <local_source> <remote_dest>
 # Read a file from the cluster
 rustDFS-client read <namenode_host:port> <remote_source> <local_dest>
 ```
+
+## CI
+
+GitHub Actions runs three checks on every change to `main`:
+
+| Job | Command |
+|---|---|
+| `build` | `cargo build --all-features` |
+| `clippy` | `cargo clippy --all-targets --all-features -- -D warnings` |
+| `rustfmt` | `cargo fmt --all -- --check` |
 
 ## Running with Docker Compose
 

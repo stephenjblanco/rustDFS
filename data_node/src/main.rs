@@ -1,7 +1,8 @@
-mod data_mgr;
+mod args;
+mod blocks;
 mod service;
 
-use rustdfs_shared::args::RustDFSArgs;
+use args::RustDFSArgs;
 use rustdfs_shared::config::RustDFSConfig;
 use service::DataNodeService;
 

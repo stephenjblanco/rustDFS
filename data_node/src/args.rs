@@ -1,22 +1,22 @@
 use clap::Parser;
 
-use super::logging::LogLevel;
+use rustdfs_shared::logging::LogLevel;
 
 /**
- * Command line arguments for RustDFS name node.
+ * Command line arguments for RustDFS data node.
  *
- *  @field id - Unique identifier for the name node.
+ *  @field port - Port number for the data node service.
  *  @field silent - If true, suppresses console output.
- *  @field log_level - Logging level for the name node.
+ *  @field log_level - Logging level for the data node.
  *
  * CLI Usage:
- *  rustdfs-<BIN_TYPE> --id <NODE_ID> [--silent] [--log-level <LOG_LEVEL>]
+ *  rustdfs-datanode --port <PORT> [--silent] [--log-level <LOG_LEVEL>]
  */
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct RustDFSArgs {
-    #[arg(long)]
-    pub id: String,
+    #[arg(short, long, default_value_t = 5001)]
+    pub port: u16,
 
     #[arg(short, long, default_value_t = false)]
     pub silent: bool,

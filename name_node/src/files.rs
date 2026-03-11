@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use tokio::sync::RwLock;
 
-use rustdfs_shared::result::ServiceResult;
+use rustdfs_shared::{host::HostAddr, result::ServiceResult};
 
 /**
  * Manages the namespace for the distributed file system.
@@ -9,22 +9,22 @@ use rustdfs_shared::result::ServiceResult;
  *  => RwLock is used to ensure thread-safe access to the namespace data.
  */
 #[derive(Debug)]
-pub struct NameManager {
+pub struct FileManager {
     files: RwLock<HashMap<String, Vec<BlockDescriptor>>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct BlockDescriptor {
     pub id: String,
-    pub node_ids: Vec<String>,
+    pub nodes: Vec<HostAddr>,
 }
 
-impl NameManager {
+impl FileManager {
     /**
-     * Creates a new NameManager instance.
+     * Creates a new FileManager instance.
      */
     pub fn new() -> Self {
-        NameManager {
+        FileManager {
             files: RwLock::new(HashMap::new()),
         }
     }
@@ -37,7 +37,6 @@ impl NameManager {
      */
     pub async fn add_file(&self, file_name: String, blocks: Vec<BlockDescriptor>) {
         let mut files = self.files.write().await;
-
         files.insert(file_name.to_string(), blocks);
     }
 
@@ -49,7 +48,6 @@ impl NameManager {
      */
     pub async fn get_blocks(&self, file_name: &str) -> ServiceResult<Vec<BlockDescriptor>> {
         let files = self.files.read().await;
-
         Ok(files[file_name].clone())
     }
 }
